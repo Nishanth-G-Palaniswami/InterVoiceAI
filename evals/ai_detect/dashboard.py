@@ -82,7 +82,13 @@ def tier_table(rows: list[dict]) -> list[dict]:
 def analyzed_calls(sources: list[pathlib.Path], extra: list[tuple[str, list[dict]]] | None = None) -> list[dict]:
     calls = []
     feeds: list[tuple[str, list[dict] | None, pathlib.Path | None]] = [(p.stem, None, p) for p in sources]
-    feeds = [(cid, evs, None) for cid, evs in (extra or [])] + feeds
+    metas: dict[str, dict] = {}
+    for item in (extra or []):
+        cid, evs = item[0], item[1]
+        if len(item) > 2 and item[2]:
+            metas[cid] = item[2]
+        feeds.insert(0, (cid, evs, None))
+    feeds = [f for f in feeds if f[1] is not None] + [f for f in feeds if f[1] is None]
     for cid, events, p in feeds:
         try:
             if events is None:
@@ -104,6 +110,7 @@ def analyzed_calls(sources: list[pathlib.Path], extra: list[tuple[str, list[dict
             "id": cid.replace(".events", ""), "started_at": started, "outcome": ended.get("outcome"),
             "duration_s": ended.get("duration_s"), "turns": sum(1 for e in events if e.get("type") == "turn"),
             "confidence": call_confidence(obs), "problems": problem_areas(obs, events), "answers": answers,
+            "candidate": metas.get(cid),
         })
     return calls
 
@@ -122,6 +129,7 @@ def neon_calls(db_url: str, hours: float = 6.0, limit: int = 8) -> list[tuple[st
         from agent_events e join recent r on r.call_id = e.call_id
         order by r.last_at desc, e.seq"""
     out: dict[str, list[dict]] = {}
+    meta: dict[str, dict] = {}
     with psycopg.connect(db_url, connect_timeout=5) as conn, conn.cursor() as cur:
         try:
             cur.execute(sql, (hours, limit))
@@ -135,7 +143,19 @@ def neon_calls(db_url: str, hours: float = 6.0, limit: int = 8) -> list[tuple[st
                 payload = json.loads(payload)
             out.setdefault(str(call_id), []).append({"call_id": call_id, "seq": seq, "type": type_, "payload": payload,
                                                      "occurred_at": str(occurred_at) if occurred_at else None})
-    return list(out.items())
+        if out:
+            try:
+                cur.execute("""select c.id::text, cand.first_name, cand.last_name, cand.email, cand.phone_e164, r.title,
+                                      c.direction, c.outcome, c.duration_s
+                               from calls c join applications ap on ap.id = c.application_id
+                               join candidates cand on cand.id = ap.candidate_id join roles r on r.id = ap.role_id
+                               where c.id::text = any(%s)""", (list(out.keys()),))
+                for cid, fn, ln, email, phone, role, direction, outcome, dur in cur.fetchall():
+                    meta[cid] = {"name": " ".join(x for x in (fn, ln) if x), "email": email, "phone": phone, "role": role,
+                                 "direction": direction, "outcome": outcome, "duration_s": dur}
+            except Exception:  # candidate lookup is a bonus; never block the events
+                conn.rollback()
+    return [(cid, evs, meta.get(cid)) for cid, evs in out.items()]
 
 
 def build_data(call_sources: list[pathlib.Path], db_url: str | None = None) -> dict:
@@ -245,6 +265,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--s1);outline-off
 .verdict{border-radius:10px;padding:18px 20px;border:1px solid var(--grid);background:var(--surface);border-left:8px solid var(--good)}
 .verdict.crit{border-left-color:var(--crit)}.verdict.warn{border-left-color:var(--warn)}.verdict.good{border-left-color:var(--good)}
 .verdict .k,.scorecard .k,.reasons .k,.waiting .k{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.cand{margin:6px 0 2px;font-size:15px}
+.cand span{color:var(--ink2);font-size:13px}
 .vtitle{font-size:30px;font-weight:700;letter-spacing:-.01em;margin:6px 0 4px;line-height:1.1}
 .vsub{color:var(--ink2);max-width:70ch}
 .vmeta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:14px;color:var(--ink2);font-variant-numeric:tabular-nums}
@@ -341,6 +363,7 @@ if (!current) {
     <div class="herogrid">
       <div class="verdict ${verdict[0]}">
         <div class="k">${inProgress ? '● Call in progress' : 'Call complete'} · ${current.id}${current.duration_s ? ` · ${current.duration_s} s` : ''}</div>
+        ${current.candidate ? `<div class="cand"><b>${current.candidate.name || 'Unknown candidate'}</b> · ${current.candidate.role || ''}<br><span>${current.candidate.phone || ''}${current.candidate.email ? ' · ' + current.candidate.email : ''}${current.candidate.direction ? ' · ' + current.candidate.direction : ''}</span></div>` : ''}
         <div class="vtitle">${verdict[1]}</div>
         <div class="vsub">${verdict[2]}</div>
         <div class="vmeta"><span><b>${strong}</b> of ${total} answers AI-assisted (both sides)</span><span><b>${flagged}</b> flagged on one side or both</span><span><b>${conf.eligible_answers}</b> of ${total} long enough to judge</span></div>
