@@ -84,3 +84,14 @@ def test_bad_recommendation_or_unknown_question_raises() -> None:
 def test_no_recorded_answers_is_skipped_without_an_llm_call() -> None:
     result = asyncio.run(assess_call(None, [ANSWERS[1]]))
     assert result["status"] == "skipped"
+
+
+def test_bare_numeric_ids_map_to_question_ids() -> None:
+    out = _model_output(
+        questions=[
+            {"id": "1", "score": 3, "evidence": "", "note": ""},
+            {"id": "Question 2", "score": None, "evidence": "", "note": ""},
+        ]
+    )
+    result = parse_assessment(out, ANSWERS)
+    assert [q["id"] for q in result["questions"]] == ["q1", "q2"]

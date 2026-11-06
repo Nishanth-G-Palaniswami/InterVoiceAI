@@ -99,6 +99,12 @@ def _norm(text: str) -> str:
     return re.sub(r"[^a-z0-9 ]", "", re.sub(r"\s+", " ", text.lower())).strip()
 
 
+def _question_id(raw: Any) -> str:
+    """Models write "q1", "Q1", "1" or "question 1"; the record uses "q1"."""
+    digits = re.search(r"\d+", str(raw or ""))
+    return f"q{int(digits.group())}" if digits else str(raw or "").strip()
+
+
 def parse_assessment(text: str, answers: list[dict[str, Any]]) -> dict[str, Any]:
     """Strict parse of the model output, with every quote checked against the
     transcript. Raises ValueError on anything unexpected."""
@@ -112,9 +118,9 @@ def parse_assessment(text: str, answers: list[dict[str, Any]]) -> dict[str, Any]
     by_id = {a["question_id"]: a for a in answers}
     questions: list[dict[str, Any]] = []
     for item in data.get("questions") or []:
-        qid = str(item.get("id", "")).strip()
+        qid = _question_id(item.get("id"))
         if qid not in by_id:
-            raise ValueError(f"unknown question id in assessment: {qid!r}")
+            raise ValueError(f"unknown question id in assessment: {item.get('id')!r}")
         score = item.get("score")
         if score is not None:
             score = int(score)

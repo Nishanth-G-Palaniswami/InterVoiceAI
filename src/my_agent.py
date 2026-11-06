@@ -375,7 +375,7 @@ class InterviewAgent(Agent):
         Args:
             question_id: The planned question's id, q1 to q4.
             summary: One neutral sentence summarising what the candidate said.
-            quality_hint: "adequate" if they gave specifics, "thin" if vague, "no_answer" if they declined or moved on.
+            quality_hint: "adequate" if they gave specifics, "thin" if vague or short, "no_answer" only if they explicitly declined, said they do not know, or asked to skip.
         """
         answer = self._answers.get(question_id)
         if answer is None:
@@ -482,16 +482,23 @@ class InterviewAgent(Agent):
             logger.info(line)
         return self._written
 
-    def start_assessment(self) -> asyncio.Task[None]:
-        """Kick off the post-call assessment once; later calls return the task."""
+    def start_assessment(self) -> asyncio.Task[None] | None:
+        """Kick off the post-call assessment once, if an event loop is running
+        (it always is on a call); later calls return the same task."""
         if self._assess_task is None:
-            self._assess_task = asyncio.create_task(self._assess())
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                return None
+            self._assess_task = loop.create_task(self._assess())
         return self._assess_task
 
     async def assess(self) -> None:
         """Make sure the assessment has been added to the written record.
         Called at shutdown (after the caller is gone), so it never delays a reply."""
-        await self.start_assessment()
+        task = self.start_assessment()
+        if task is not None:
+            await task
 
     async def _assess(self) -> None:
         if self._record is None or "assessment" in self._record:
