@@ -31,3 +31,8 @@ KMS
 
 # GitHub CLI
 .github/personal-instructions.md
+
+# post-interview analysis: call event dumps (candidate speech) and generated pages
+calls/
+evals/ai_detect/dashboard.html
+evals/ai_detect/report.md

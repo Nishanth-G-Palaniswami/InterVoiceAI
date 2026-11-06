@@ -1,0 +1,141 @@
+{
+  "role_slug": "rn-med-surg",
+  "version": 1,
+  "question_bank_version": 1,
+  "status": "production",
+  "title": "Registered Nurse, Med-Surg (Nights)",
+  "org_name": "Riverside Community Hospital",
+  "language": "en",
+  "keyterms": ["RN", "BLS", "ACLS", "med-surg", "telemetry", "Epic", "Cerner", "SBAR", "rapid response", "PRN", "charge nurse", "NCLEX", "MEWS", "sepsis", "CNA", "LPN", "night shift", "three twelves"],
+  "knockouts": [
+    {
+      "id": "ko_license",
+      "question": "Do you currently hold an active, unencumbered California RN license?",
+      "pass_if": "Yes, active and unencumbered in California. A license from another state only, or one pending California endorsement with a date, is 'unclear'.",
+      "fail_if": "No license, expired, or restricted.",
+      "clarify": "Is that a California license, and is it active right now?"
+    },
+    {
+      "id": "ko_bls",
+      "question": "Is your BLS certification current?",
+      "pass_if": "Yes, current BLS. ACLS is a plus, not required.",
+      "fail_if": "No BLS and no plan to renew before start.",
+      "clarify": "When does it expire?"
+    },
+    {
+      "id": "ko_shift",
+      "question": "This role is nights, three twelve-hour shifts a week, with every third weekend. Does that schedule work for you?",
+      "pass_if": "Yes, or yes with a minor constraint the team could accommodate.",
+      "fail_if": "Cannot work nights or weekends at all.",
+      "clarify": "Is that a hard no on nights, or something we could work around?"
+    }
+  ],
+  "competencies": [
+    {
+      "id": "clinical_judgment",
+      "name": "Clinical judgment and escalation",
+      "weight": 0.35,
+      "anchors": {
+        "1": "Cannot describe a specific deteriorating patient, or describes waiting without acting.",
+        "2": "Generic answer ('I'd call the doctor') with no assessment steps or specifics.",
+        "3": "A real example with assessment and escalation, but vague on cues, timing, or outcome.",
+        "4": "Specific cues (vitals trend, mental status), a clear escalation path (charge nurse, rapid response, provider), and an outcome.",
+        "5": "Specific early-warning cues, prioritized actions while escalating, structured handoff (e.g. SBAR), outcome, and what they learned."
+      },
+      "must_have_signals": ["recognizes deterioration", "escalates appropriately", "acts while waiting"]
+    },
+    {
+      "id": "patient_communication",
+      "name": "Patient and family communication",
+      "weight": 0.25,
+      "anchors": {
+        "1": "Dismissive of the patient or family, or no example.",
+        "2": "States they 'explain things' with no example or technique.",
+        "3": "A real example of calming or informing a patient or family, with limited detail on what they said or did.",
+        "4": "Specific words or actions used, checks understanding (teach-back or similar), stays within scope.",
+        "5": "Handles a hard conversation (upset family, refusal of care) with empathy, clear boundaries, and appropriate escalation; describes the result."
+      },
+      "must_have_signals": ["empathy", "checks understanding", "stays in scope"]
+    },
+    {
+      "id": "teamwork_reliability",
+      "name": "Teamwork under load",
+      "weight": 0.25,
+      "anchors": {
+        "1": "Blames others, or describes leaving tasks undone without communicating.",
+        "2": "Says they are a team player with no example.",
+        "3": "An example of helping or asking for help on a busy shift, light on how priorities were set.",
+        "4": "Describes prioritizing a heavy assignment, communicating with the charge nurse, and delegating appropriately to CNAs.",
+        "5": "Clear prioritization logic, safe delegation, closed-loop communication, and how they supported a colleague without dropping their own patients."
+      },
+      "must_have_signals": ["prioritizes", "communicates early", "delegates safely"]
+    },
+    {
+      "id": "documentation_ehr",
+      "name": "Documentation and EHR",
+      "weight": 0.15,
+      "anchors": {
+        "1": "No EHR experience and no sense of documentation timing.",
+        "2": "Names an EHR but cannot describe their charting routine.",
+        "3": "Uses an EHR daily; describes charting at the end of shift.",
+        "4": "Charts in near real time, names what they document after a change in condition.",
+        "5": "Real-time charting habits, accurate late-entry practice, and how documentation supports handoff and safety."
+      },
+      "must_have_signals": ["timely charting", "documents change in condition"]
+    }
+  ],
+  "thresholds": { "pass": 60, "strong": 80 },
+  "question_bank": [
+    {
+      "id": "q_judgment",
+      "competency": "clinical_judgment",
+      "question": "Tell me about a time a patient's condition started to get worse during your shift. What did you notice, and what did you do?",
+      "probe": "What was the first thing that tipped you off, and who did you call?",
+      "short": "Can you walk me through one time a patient got worse on your shift?"
+    },
+    {
+      "id": "q_communication",
+      "competency": "patient_communication",
+      "question": "Tell me about a time you had to calm down an upset patient or family member. What did you say?",
+      "probe": "How did you know they understood you?",
+      "short": "Any time you had to calm down an upset patient or family?"
+    },
+    {
+      "id": "q_teamwork",
+      "competency": "teamwork_reliability",
+      "question": "Think of your busiest night shift. How did you decide what to do first, and how did you work with the rest of the team?",
+      "probe": "Did you hand anything off to a CNA or ask the charge nurse for help?",
+      "short": "On a really busy shift, how do you decide what comes first?"
+    },
+    {
+      "id": "q_documentation",
+      "competency": "documentation_ehr",
+      "question": "Which EHR have you used, and when during a shift do you usually chart?",
+      "probe": "What do you make sure to document when a patient's condition changes?",
+      "short": "Which charting system have you used?"
+    }
+  ],
+  "faq": [
+    { "q": "pay, salary, hourly rate, differential, sign-on bonus", "a": "I can't speak to pay, but a recruiter will go over compensation with you directly." },
+    { "q": "schedule, shifts, hours", "a": "It's nights, three twelve-hour shifts a week, seven p.m. to seven a.m., with every third weekend." },
+    { "q": "unit, floor, ratio, patients", "a": "It's a thirty-two bed medical-surgical unit. I don't have exact ratios; the team can share those." },
+    { "q": "next steps, timeline, when will I hear back", "a": "The recruiting team reviews every screen within a few business days and will reach out by email." },
+    { "q": "start date, when can I start", "a": "I can't commit to a start date; the recruiter will discuss timing with you." },
+    { "q": "benefits, PTO, insurance", "a": "I don't have benefit details, but I'll note that you asked and the recruiter will follow up." },
+    { "q": "location, where, city, state, parking", "a": "It's at the main Riverside campus in San Francisco, California. I don't have parking details; I'll note the question." }
+  ],
+  "plan": {
+    "plan_version": 1,
+    "plan_source": "template",
+    "steps": [
+      { "stage": "open", "id": "open" },
+      { "stage": "identity", "id": "identity" },
+      { "stage": "knockouts", "ids": ["ko_license", "ko_bls", "ko_shift"] },
+      { "stage": "core", "ids": ["q_judgment", "q_communication", "q_teamwork", "q_documentation"], "min_core_if_short_on_time": 2 },
+      { "stage": "candidate_q", "max_questions": 2 },
+      { "stage": "close", "id": "close" }
+    ],
+    "time_budget_s": { "soft_close": 420, "hard_close": 540 },
+    "avoid": ["pay figures", "offers or hiring promises", "start dates", "age, family, religion, national origin, disability, pregnancy, or any protected characteristic", "medical or legal advice"]
+  }
+}
