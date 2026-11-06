@@ -392,6 +392,26 @@ function answerCard(x) {
   </div>`;
 }
 
+const RECOMMENDATION = { advance: ['good', 'Advance'], follow_up: ['warn', 'Follow up'], do_not_advance: ['crit', 'Do not advance'] };
+
+function assessmentView(a) {
+  if (!a) return `<h2>Interview assessment</h2><div class="panel"><p class="empty">Not assessed yet. Nia writes the assessment right after the call ends.</p></div>`;
+  if (a.status !== 'ok') return `<h2>Interview assessment</h2><div class="panel"><p class="empty">Assessment ${esc(a.status)}${a.error ? ': ' + esc(a.error) : ''}${a.reason ? ': ' + esc(a.reason) : ''}</p></div>`;
+  const [cls, lab] = RECOMMENDATION[a.recommendation] || ['warn', a.recommendation];
+  const rows = (a.questions || []).map(q => `<div class="ans"><div class="q"><span class="qid">${esc(q.id)}</span><span class="hint">${q.score == null ? 'not answered' : 'score ' + esc(q.score) + ' / 5'}</span></div>
+      ${q.note ? `<p class="summary">${esc(q.note)}</p>` : ''}
+      ${q.evidence ? `<ul class="ev"><li>"${esc(q.evidence)}"${q.evidence_verified ? '' : ' <span class="small">(quote not found verbatim in the transcript)</span>'}</li></ul>` : ''}</div>`).join('');
+  const list = (items, label) => items && items.length ? `<div><b>${esc(label)}</b><ul class="ev">${items.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>` : '';
+  return `<h2>Interview assessment</h2>
+    <div class="verdict ${cls}">
+      <div class="metrics"><span class="badge ${cls}">${esc(lab)}</span><span>overall <b>${a.overall == null ? '?' : esc(a.overall)}</b> / 5</span></div>
+      ${a.rationale ? `<p class="summary">${esc(a.rationale)}</p>` : ''}
+      ${list(a.strengths, 'Strengths')}${list(a.concerns, 'Concerns')}
+      <p class="small">${esc(a.note || '')}</p>
+    </div>
+    <div class="answers">${rows}</div>`;
+}
+
 function transcriptView(lines) {
   if (!lines.length) return '<p class="empty">Nothing said yet.</p>';
   return `<div class="transcript">${lines.map(l => {
@@ -443,6 +463,7 @@ function renderReport() {
     const tabs = calls.length > 1 ? `<div class="calltabs" role="group" aria-label="Calls">${calls.map(x => `<button type="button" data-call="${esc(x.id)}" aria-pressed="${x.id === sel.id}">${esc(when(x.started_at))} · ${x.in_progress ? 'live' : esc(OUTCOME[x.outcome] || x.outcome)} · ${esc(x.score)}</button>`).join('')}</div>` : '';
     const mech = (sel.analysis?.problems || []).filter(p => !(sel.answers || []).some(a => a.question_id === p.area));
     body = `${tabs}${hero(sel)}
+      ${assessmentView(sel.assessment)}
       <h2>Interview answers</h2>
       <div class="answers">${(sel.answers || []).map(answerCard).join('') || '<p class="empty">No questions on record.</p>'}</div>
       ${mech.length ? `<h2>Call mechanics</h2><div class="panel"><ul class="problems">${mech.map(p => `<li><span class="sev ${esc(p.severity)}">${esc(p.severity)}</span><span><b>${esc(p.area)}</b>: ${esc(p.note)}</span></li>`).join('')}</ul></div>` : ''}

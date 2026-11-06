@@ -75,6 +75,7 @@ class CallView(TypedDict):
     answers: list[AnswerView]
     transcript: list[TranscriptLine]
     restarts: int
+    assessment: dict[str, Any] | None  # Nia's post-call assessment, from the C2 record
 
 
 class DecisionRecord(TypedDict):
@@ -344,6 +345,7 @@ def _call_view(entry: dict[str, Any], record: dict[str, Any] | None) -> CallView
         answers=answers,
         transcript=lines,
         restarts=restarts,
+        assessment=(record or {}).get("assessment"),
     )
 
 
