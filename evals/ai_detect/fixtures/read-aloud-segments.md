@@ -1,40 +1,46 @@
 # Read-aloud segments for the test calls (AI-generated, 2026-11-06)
 
-Ten answers written by an LLM for the four core questions the RN med-surg agent asks. Reading one of these verbatim
-on a call is the "cheating candidate" condition. Mix them with your own answers so the dashboard has both.
+For the live demo role: **Phlebotomist (Outpatient Lab), Riverside Community Hospital**, the role Adi's agent asked
+on the dry run. Ten answers written by an LLM for its four core questions. Reading one verbatim on a call is the
+"cheating candidate" condition. Mix them with your own answers so the dashboard has both.
 
-How to run the calls
-- Knockouts come first; just answer them naturally: yes, California license; yes, BLS current; yes, nights work.
-- The agent asks one unscripted follow-up after each core answer. Do NOT read for that one; answer it off the cuff.
-  That contrast is the strongest signal we have.
+## Getting the agent to the core questions (the dry run never got there)
+
+- One speaker, quiet room, phone to your ear or a headset. The dry run was a browser call that heard the whole room.
+- The agent opens, then asks three knockouts. Answer each with a clear yes in one sentence:
+  1. "Do you currently hold an active California CPT 1 phlebotomy certification?" → **"Yes, I have an active California CPT 1."**
+  2. "Do you have at least six months of hands-on venipuncture experience in a clinical setting?" → **"Yes, about two years in an outpatient lab."**
+  3. "Early morning starts and alternating Saturdays, does that work?" → **"Yes, that schedule works for me."**
+- Then the four core questions come in order. After each answer it asks ONE unscripted follow-up. Do NOT read for the
+  follow-up; answer it off the cuff. That contrast is the strongest signal we have.
 - Call plan: Call 1 all in your own words (control). Call 2 read a segment for every question. Call 3 read for two
-  questions, your own words for two. Note which call did what; the dashboard shows calls by id and time.
-- Speak at a normal reading pace. Do not add "um"s on purpose; let it be what it is.
+  questions, your own words for two. Note which call did what.
+- Speak at a normal reading pace. Do not add "um"s on purpose.
 
-## q_judgment: "a time a patient's condition started to get worse"
+## q_technical_venipuncture: "a very difficult blood draw, rolling veins or a young child"
 
-1. During a night shift, I noticed that a post-operative patient's heart rate had gradually increased while his blood pressure trended downward, and he appeared more confused than at the start of my shift. I immediately performed a focused assessment, rechecked his vital signs, and notified the charge nurse. I then escalated to the rapid response team and communicated my findings using the SBAR format. Ultimately, the patient was transferred to a higher level of care, and I believe early recognition contributed to a positive outcome.
+1. I recall a patient with particularly rolling veins who had experienced multiple unsuccessful attempts in the past. I began by thoroughly assessing both arms and applying a warm compress to improve vein visibility. I then anchored the vein firmly below the insertion site and selected a smaller gauge butterfly needle to minimize discomfort. By communicating each step clearly and maintaining a calm demeanor, I was able to obtain the sample on the first attempt, and the patient expressed relief and gratitude.
 
-2. I once cared for a patient with pneumonia whose oxygen saturation began to decline despite supplemental oxygen. I observed increased work of breathing and a subtle change in mental status. I promptly increased the oxygen as permitted by protocol, repositioned the patient, and obtained a complete set of vital signs. I then notified the provider and activated the rapid response team while preparing the patient for possible transfer. Throughout the process, I remained calm and communicated clearly with the patient and the team.
+2. One of my most challenging draws involved a four-year-old child who was extremely frightened. I prioritized building rapport by speaking at her level and explaining the process using age-appropriate language. I utilized a pediatric butterfly needle and selected the antecubital vein after careful palpation. Additionally, I enlisted the parent's help to provide comfort and distraction. The draw was successful, and I believe that patience and preparation were the key factors in achieving a positive outcome.
 
-3. A patient recovering from abdominal surgery developed new tachycardia and reported increasing pain that was not relieved by his scheduled medication. I recognized these as potential early indicators of a complication and completed a thorough abdominal assessment. I escalated my concerns to the on-call provider, obtained orders for additional labs and imaging, and continued to monitor the patient closely. The patient was ultimately diagnosed with an internal bleed and returned to surgery, which reinforced the importance of trusting clinical intuition.
+3. I once worked with an elderly patient whose veins were fragile and tended to collapse under tourniquet pressure. I adjusted my approach by using minimal tourniquet time, selecting a smaller gauge needle, and reducing the vacuum by using a syringe draw. I also ensured the patient was well hydrated and positioned comfortably. This methodical approach allowed me to collect the required specimens without bruising or repeated attempts, which reinforced the importance of adapting technique to each patient.
 
-## q_communication: "calm down an upset patient or family member"
+## q_patient_care_anxiety: "a patient or child terrified of needles"
 
-4. I recall a situation where a family member was upset because they felt their loved one's pain was not being managed effectively. First, I listened actively and acknowledged their concerns without becoming defensive. Second, I explained the current pain management plan in clear, simple terms and checked their understanding. Finally, I collaborated with the provider to reassess the plan and communicated the updates to the family promptly. It is important to maintain empathy and professionalism in these situations.
+4. I worked with a teenage patient who had a severe fear of needles and was visibly shaking. First, I acknowledged his fear and reassured him that his feelings were completely valid. Second, I explained each step of the procedure before performing it and gave him control by letting him choose which arm to use. Finally, I encouraged slow, deep breathing and engaged him in conversation about his interests. By the end, he was surprised at how quickly it was over and thanked me for my patience.
 
-5. A patient was frustrated because she had been waiting several hours for her discharge paperwork. I approached her calmly, apologized for the delay, and explained the steps that remained in the discharge process. Additionally, I provided a realistic timeframe and checked back regularly to keep her informed. I also advocated on her behalf by following up with the provider and case management. By the time she left, she expressed appreciation for the clear communication, which reinforced my belief that transparency builds trust.
+5. A young child arrived for a blood draw in tears and clinging to her mother. I knelt down to her eye level and introduced myself in a friendly, calm voice. I showed her the butterfly needle, which I described as a tiny straw, and allowed her to hold a stress ball. Additionally, I asked her mother to hold her hand and talk about her favorite cartoon. These techniques helped the child relax enough for a successful draw, and she left with a sticker and a smile.
 
-6. An elderly patient's daughter became visibly angry when visiting hours ended and she was asked to leave. I acknowledged her feelings and explained that the policy exists to support patient rest and recovery. I then offered practical alternatives, including a scheduled phone update and an earlier visit the following day. By validating her concerns while maintaining appropriate boundaries, I was able to de-escalate the situation effectively, and she thanked me before leaving the unit.
+6. An adult patient disclosed that she had fainted during previous blood draws and was extremely anxious. I immediately positioned her in a reclined chair to reduce the risk of syncope and explained that this was a common and manageable reaction. I maintained steady conversation throughout the procedure, used a gentle touch, and completed the draw efficiently. Afterward, I monitored her for several minutes and provided water. She later told me it was the most comfortable draw she had ever experienced.
 
-## q_teamwork: "your busiest night shift, what to do first, working with the team"
+## q_specimen_integrity_safety: "caught a potential error with patient identification or specimen labeling"
 
-7. On my busiest night shift, I prioritized patient safety by reassessing acuity levels and reorganizing my workflow accordingly. I communicated proactively with the charge nurse to ensure that critical tasks were covered and delegated appropriate tasks, such as vital signs and ambulation, to our certified nursing assistant. Furthermore, I maintained open communication with my colleagues so that we could support one another throughout the shift. Overall, the experience reinforced the importance of teamwork, flexibility, and clear communication.
+7. During a busy morning, I noticed that the labels printed for a patient did not match the date of birth the patient had verbally confirmed. Rather than proceeding, I paused the collection and verified the patient's identity using two identifiers against the order in the system. I discovered that a different patient with the same name had been selected in error. I immediately notified the front desk, corrected the order, and reprinted the labels before collecting the specimen, ensuring accurate results.
 
-8. When the unit was short-staffed, I began by rounding on every patient to identify the highest-acuity needs and time-sensitive medications. I then created a prioritized plan and shared it with the charge nurse, who helped redistribute admissions across the team. I delegated routine tasks to the CNA and asked a colleague to double-check a high-risk infusion with me. By maintaining clear communication and a systematic approach, we completed all essential care safely and without incident.
+8. I once observed that a colleague had labeled a tube after leaving the patient's side, which is a deviation from our labeling policy. I respectfully brought this to their attention and suggested we recollect the sample to maintain specimen integrity. We informed the patient, who appreciated our diligence, and performed a new draw with bedside labeling. I subsequently documented the incident according to protocol, as I believe maintaining strict adherence to identification procedures is essential for patient safety.
 
-## q_documentation: "which EHR, when do you chart, what you document when a patient changes"
+## q_workflow_teamwork: "a morning with a full waiting room, managing the rush while staying accurate"
 
-9. I have primarily used Epic, and I also have experience with Cerner from a previous position. I typically chart in real time at the bedside whenever possible, and I complete a comprehensive review of my documentation at the midpoint and end of each shift. When a patient's condition changes, I ensure that I document the specific assessment findings, the exact time of each intervention, who was notified and when, and the patient's response, so that the record provides a clear and defensible timeline.
+9. On a particularly busy morning, the waiting room was full within the first hour. I prioritized patients based on appointment times and clinical urgency, such as fasting patients and timed draws. I communicated proactively with my teammates to distribute the workload evenly and ensured that supplies at each station were fully stocked. Despite the pace, I maintained strict adherence to patient identification and labeling protocols, and we successfully reduced wait times without compromising accuracy.
 
-10. My primary experience is with Epic, which I have used for approximately four years, and I am comfortable adapting to new systems. I believe timely documentation is essential to patient safety, so I chart assessments as I complete them rather than batching at the end of the shift. For any change in condition, I document objective data such as vital signs and mental status, my nursing interventions, all provider communications including the time and content, and any new orders received.
+10. When our draw station experienced an unexpected rush, I took a moment to assess the queue and identify any time-sensitive collections. I then coordinated with my colleagues to open an additional station and assigned one team member to greet patients and verify their orders in advance. This streamlined the process significantly. Throughout the morning, I remained focused on performing each draw accurately and safely, and I believe that clear communication and teamwork were essential to our success.
