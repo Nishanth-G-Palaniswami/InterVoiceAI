@@ -83,6 +83,18 @@ follow-up on a live call can catch it. Voice-side numbers need real word timings
 Decision for Alex: keep 3 (fewer false flags, "evidence for a recruiter") or move to 2 (catches more, and 2 of 6
 synthetic prepared humans get flagged). Sweep: `uv run python evals/ai_detect/run.py --timings none --text-min-signals N`.
 
+## Real calls from the team database (2026-11-06 17:55, Deepgram word timings, text + voice)
+
+| Call | Who / how | Answers | Result |
+|---|---|---|---|
+| 3c6ababa | Adi's synthetic caller reading prepared answers ("Reed Readtwo", inbound) | 2 | **both AI-assisted**, confidence 81: text 4 and 3 signals, voice 5 and 5 (200 and 174 wpm, no fillers), follow-ups stumbled |
+| e17a0efa | Adi answering in his own words (browser) | 4 | no flags, confidence 8 |
+| a3a49ea8 | scripted one-sentence answers ("Reed Scripttest", inbound) | 4 | too short to judge (9 to 18 words) |
+| 62651cc1 | live inbound test, mostly fragments | 2 | too short to judge |
+| 1ca018ad | dry run, room audio on a browser call | 0 | never reached a core question; 8 interruptions, 5 silence events |
+
+One labelled read call caught with both sides agreeing, one own-words call clean. Small n, real signal.
+
 ## Timeline to 7:00
 
 | Time | Step | Done when |
