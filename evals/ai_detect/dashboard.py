@@ -115,7 +115,7 @@ def analyzed_calls(sources: list[pathlib.Path], extra: list[tuple[str, list[dict
     return calls
 
 
-def neon_calls(db_url: str, hours: float = 6.0, limit: int = 8) -> list[tuple[str, list[dict]]]:
+def neon_calls(db_url: str, hours: float = 24 * 7, limit: int = 40) -> list[tuple[str, list[dict]]]:
     """Events for the most recent calls from the reference product's `agent_events` table (BUILD_PLAN §9).
     Read-only; polled on every refresh in --serve mode so a call in progress fills in as its events land."""
     import psycopg
@@ -260,6 +260,20 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--s1);outline-off
 .method{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
 .method p{margin:0 0 6px}
 .method b{display:block;margin-bottom:2px}
+.roster{margin:4px 0 14px}
+.rosterhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.rosterhead .k{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.follow{font:inherit;font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--axis);background:var(--surface);color:var(--ink2);cursor:pointer}
+.follow[aria-pressed="true"]{border-color:var(--s1);color:var(--ink)}
+.cards{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity}
+.card{flex:0 0 220px;scroll-snap-align:start;text-align:left;font:inherit;background:var(--surface);border:1px solid var(--grid);border-radius:8px;padding:10px 12px;cursor:pointer;color:var(--ink);min-width:0}
+.card.sel{border-color:var(--s1);box-shadow:inset 0 0 0 1px var(--s1)}
+.card .cname{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .crole{font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0 6px}
+.card .cmeta{display:flex;flex-wrap:wrap;gap:4px 8px;font-size:12px;color:var(--muted);align-items:center;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;min-width:28px;text-align:center;font-weight:700;font-size:12px;padding:1px 6px;border-radius:999px;color:#fff}
+.pill.crit{background:var(--crit)}.pill.warn{background:var(--warn);color:var(--warn-ink)}.pill.good{background:var(--good)}
+.card .dec{font-weight:600;color:var(--ink)}
 .hero{margin:6px 0 10px}
 .herogrid{display:grid;grid-template-columns:1fr 260px;gap:12px;margin-bottom:12px}
 .verdict{border-radius:10px;padding:18px 20px;border:1px solid var(--grid);background:var(--surface);border-left:8px solid var(--good)}
@@ -300,13 +314,13 @@ h2.pagehead{font-size:24px;margin:0 0 4px}
   <div class="stamp" id="stamp">__LIVE_BADGE__</div>
 </header>
 
+<section id="roster" class="roster"></section>
 <section id="recruiter" class="hero"></section>
 
 <hr class="break">
 <h2 class="pagehead">Interview breakdown</h2>
 <p class="sub">Every recorded answer of the current call with the signals behind it, then the call mechanics. Updates as the call runs.</p>
 <div id="breakdown" class="calls"></div>
-<details class="panel earlier" id="earlier"><summary>Earlier calls</summary><div class="calls" id="earlier-calls"></div></details>
 
 <hr class="break">
 <h2 class="pagehead">Detector performance</h2>
@@ -336,20 +350,48 @@ const D = JSON.parse(document.getElementById('data').textContent);
 const pct = x => x == null ? 'n/a' : Math.round(x * 100) + '%';
 document.getElementById('stamp').insertAdjacentText('beforeend', ` Generated ${D.generated_at} · ${D.n_fixtures} labelled answers · ${D.calls.length} call(s)` + (D.db_feed ? (D.db_error ? ` · database feed error: ${D.db_error}` : ' · database feed on') : ' · local files only'));
 
-// ---- Recruiter view: the current (most recent) call ----
+// ---- Recruiter view: one selected call, a roster of all callers ----
 const THRESHOLD = 0.6;  // confidence at or above this = "likely AI-assisted" (band high)
 const badge = v => ({ ai_assisted: ['crit', '● AI-assisted'], reads_generated: ['warn', '▲ reads generated'], sounds_read: ['warn', '▲ sounds read'], none: ['good', '✓ no flags'], ineligible: ['mute', '– too short'] }[v] || ['mute', v]);
-const current = D.calls[0] || null;
-const hero = document.getElementById('recruiter');
-if (!current) {
-  hero.innerHTML = `<div class="panel waiting"><div class="k">Waiting for the first call</div><p>${D.db_feed ? (D.db_error ? 'Database feed error: ' + D.db_error : 'Database feed connected. The call appears here as soon as its first event lands.') : 'No feed connected yet. Add DATABASE_URL_READONLY to .env.local, or drop a call\'s events into calls/.'}</p></div>`;
-} else {
+const scoreOf = c => Math.round(((c.confidence || {}).score || 0) * 100);
+const bandCls = c => { const s = (c.confidence || {}).score || 0; return s >= THRESHOLD ? 'crit' : s >= 0.35 ? 'warn' : 'good'; };
+const when = c => c.started_at ? new Date(c.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+const store = { get(k) { try { return JSON.parse(localStorage.getItem('cheat-detect:' + k) || 'null'); } catch { return null; } }, set(k, v) { try { localStorage.setItem('cheat-detect:' + k, JSON.stringify(v)); return true; } catch { return false; } } };
+
+// Selection: the hash names the call; it survives the auto-refresh. No hash = follow the newest call.
+const pickedId = (location.hash || '').replace(/^#/, '');
+let current = D.calls.find(c => c.id === pickedId) || D.calls[0] || null;
+const following = !pickedId || !D.calls.some(c => c.id === pickedId);
+
+function renderRoster() {
+  const el = document.getElementById('roster');
+  if (!D.calls.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="rosterhead"><span class="k">Callers (${D.calls.length})</span><button class="follow" id="follow" aria-pressed="${following}" title="Show the newest call automatically">${following ? '● following newest' : 'follow newest'}</button></div>
+    <div class="cards">${D.calls.map(c => { const cand = c.candidate || {}; const sel = current && c.id === current.id;
+      const dec = store.get(c.id); const decLab = dec && dec.v ? { go: 'Go', hold: 'Follow up', nogo: 'No-go' }[dec.v] : '';
+      return `<button class="card ${sel ? 'sel' : ''}" data-id="${c.id}" aria-pressed="${sel}">
+        <div class="cname">${cand.name || 'Unknown caller'}</div>
+        <div class="crole">${cand.role || ''}${cand.direction ? ' · ' + cand.direction : ''}</div>
+        <div class="cmeta"><span class="pill ${bandCls(c)}">${scoreOf(c)}</span><span>${(c.answers || []).length} answers</span><span>${c.outcome || 'in progress'}</span><span>${when(c)}</span>${decLab ? `<span class="dec">${decLab}</span>` : ''}</div>
+      </button>`; }).join('')}</div>`;
+  el.querySelectorAll('.card').forEach(b => b.addEventListener('click', () => { location.hash = b.dataset.id; renderAll(); }));
+  const f = document.getElementById('follow');
+  f.addEventListener('click', () => { history.replaceState(null, '', location.pathname); renderAll(); });
+}
+
+function renderHero() {
+  const hero = document.getElementById('recruiter');
+  if (!current) {
+    hero.innerHTML = `<div class="panel waiting"><div class="k">Waiting for the first call</div><p>${D.db_feed ? (D.db_error ? 'Database feed error: ' + D.db_error : 'Database feed connected. The call appears here as soon as its first event lands.') : 'No feed connected yet. Add DATABASE_URL_READONLY to .env.local, or drop a call\'s events into calls/.'}</p></div>`;
+    return;
+  }
   const conf = current.confidence || { score: 0, band: 'low', eligible_answers: 0, answers: 0, strong: [], flagged: [] };
   const score = Math.round(conf.score * 100);
   const verdict = conf.score >= THRESHOLD ? ['crit', 'Likely AI-assisted', 'Above the threshold. Two independent signal sets agree on at least one answer.']
                 : conf.band === 'medium' ? ['warn', 'Possible AI assistance', 'Below the threshold. One side flagged, or weak agreement. Read the reasons before deciding.']
                 : ['good', 'No indication of AI assistance', 'Below the threshold on every recorded answer so far.'];
   const inProgress = !current.outcome;
+  const cand = current.candidate || null;
   const reasons = [];
   (current.answers || []).forEach(a => {
     if (a.verdict === 'ai_assisted' || a.verdict === 'reads_generated' || a.verdict === 'sounds_read') {
@@ -363,7 +405,7 @@ if (!current) {
     <div class="herogrid">
       <div class="verdict ${verdict[0]}">
         <div class="k">${inProgress ? '● Call in progress' : 'Call complete'} · ${current.id}${current.duration_s ? ` · ${current.duration_s} s` : ''}</div>
-        ${current.candidate ? `<div class="cand"><b>${current.candidate.name || 'Unknown candidate'}</b> · ${current.candidate.role || ''}<br><span>${current.candidate.phone || ''}${current.candidate.email ? ' · ' + current.candidate.email : ''}${current.candidate.direction ? ' · ' + current.candidate.direction : ''}</span></div>` : ''}
+        ${cand ? `<div class="cand"><b>${cand.name || 'Unknown candidate'}</b> · ${cand.role || ''}<br><span>${cand.phone || ''}${cand.email ? ' · ' + cand.email : ''}${cand.direction ? ' · ' + cand.direction : ''}</span></div>` : ''}
         <div class="vtitle">${verdict[1]}</div>
         <div class="vsub">${verdict[2]}</div>
         <div class="vmeta"><span><b>${strong}</b> of ${total} answers AI-assisted (both sides)</span><span><b>${flagged}</b> flagged on one side or both</span><span><b>${conf.eligible_answers}</b> of ${total} long enough to judge</span></div>
@@ -382,36 +424,41 @@ if (!current) {
     <div class="decision" data-call="${current.id}"><span class="lbl">Your decision</span><button class="go" data-v="go">Go</button><button class="hold" data-v="hold">Follow up</button><button class="nogo" data-v="nogo">No-go</button><input type="text" id="note-${current.id}" placeholder="Why (saved on this device only)"><span class="saved"></span></div>`;
 }
 
-// ---- Interview breakdown: answers of the current call, then earlier calls ----
 const answerBlock = a => { const [cls, lab] = badge(a.verdict); const d = a.delivery; const t = a.text;
   return `<div class="ans"><div><span class="badge ${cls}">${lab}</span><div class="qid">${a.question_id} · score ${Math.round((a.confidence || 0) * 100)}</div></div><div>
     <div class="metrics">${d ? `<span>onset <b>${d.onset_ms ?? '?'} ms</b></span><span><b>${d.main.wpm ?? '?'}</b> wpm</span><span>fillers <b>${d.main.fillers_per100}</b>/100</span><span>pauses <b>${d.main.pauses_per100}</b>/100</span><span>restarts <b>${d.main.restarts_per100}</b>/100</span>${d.follow_up ? `<span>follow-up disfluency <b>${d.follow_up.disfluency_per100}</b> vs <b>${d.main.disfluency_per100}</b></span>` : ''}` : '<span>no word timings</span>'}<span><b>${t.words}</b> words</span><span>text signals <b>${t.signals.length}</b>/6</span></div>
     ${a.evidence.length ? `<ul class="ev">${a.evidence.map(e => `<li>${e}</li>`).join('')}</ul>` : '<div class="empty">no signals</div>'}</div></div>`; };
-const callCard = (c, withDecision) => {
-  const conf = c.confidence || { score: 0, band: 'low', eligible_answers: 0, answers: 0 };
+
+function renderBreakdown() {
+  const el = document.getElementById('breakdown');
+  if (!current) { el.innerHTML = '<div class="panel empty">The breakdown fills in once a call is in progress.</div>'; return; }
+  const c = current, conf = c.confidence || { score: 0, band: 'low', eligible_answers: 0, answers: 0 };
   const color = conf.band === 'high' ? 'var(--crit)' : conf.band === 'medium' ? 'var(--warn)' : 'var(--good)';
   const head = `<div class="callhead"><div><h3>Call <small>${c.id}</small> ${c.outcome ? `<small>${c.outcome} · ${c.duration_s ?? '?'} s · ${c.turns} turns</small>` : '<small>in progress</small>'} ${c.started_at ? `<small>${c.started_at}</small>` : ''}</h3>
       ${c.problems && c.problems.length ? `<ul class="problems">${c.problems.map(p => `<li><span class="sev ${p.severity}">${p.severity}</span><span><b>${p.area}</b>: ${p.note}</span></li>`).join('')}</ul>` : '<div class="empty" style="margin-bottom:10px">No problem areas detected on this call.</div>'}</div>
     <div class="conf"><div><div class="score">${Math.round(conf.score * 100)}</div><div class="band">${conf.band} confidence · ${conf.eligible_answers}/${conf.answers} answers eligible</div></div><div class="meter"><i style="width:${Math.round(conf.score * 100)}%;background:${color}"></i></div></div></div>`;
   const body = c.error ? `<div class="empty">${c.error}</div>` : c.answers.length ? c.answers.map(answerBlock).join('') : '<div class="empty">no recorded answers yet</div>';
-  const dec = withDecision ? `<div class="decision" data-call="${c.id}"><span class="lbl">Recruiter decision</span><button class="go" data-v="go">Go</button><button class="hold" data-v="hold">Follow up</button><button class="nogo" data-v="nogo">No-go</button><input type="text" id="note2-${c.id}" placeholder="Why (saved on this device only)"><span class="saved"></span></div>` : '';
-  return `<div class="call">${head}${body}${dec}</div>`;
-};
-document.getElementById('breakdown').innerHTML = current ? callCard(current, false) : '<div class="panel empty">The breakdown fills in once a call is in progress.</div>';
-const earlier = D.calls.slice(1);
-const earlierEl = document.getElementById('earlier');
-if (earlier.length) { document.getElementById('earlier-calls').innerHTML = earlier.map(c => callCard(c, true)).join(''); earlierEl.querySelector('summary').textContent = `Earlier calls (${earlier.length})`; } else { earlierEl.hidden = true; }
+  el.innerHTML = `<div class="call">${head}${body}</div>`;
+}
 
-// Human in the loop: the decision is the recruiter's. Nothing is pre-selected; saved per device in localStorage.
-const store = { get(k) { try { return JSON.parse(localStorage.getItem('cheat-detect:' + k) || 'null'); } catch { return null; } }, set(k, v) { try { localStorage.setItem('cheat-detect:' + k, JSON.stringify(v)); return true; } catch { return false; } } };
-document.querySelectorAll('.decision').forEach(d => {
-  const id = d.dataset.call, note = d.querySelector('input'), saved = d.querySelector('.saved');
-  const render = s => { d.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(!!s && b.dataset.v === s.v))); if (s) { if (document.activeElement !== note) note.value = s.note || ''; saved.textContent = `saved ${s.at}`; } };
-  render(store.get(id));
-  const save = v => { const s = { v: v ?? (d.querySelector('[aria-pressed="true"]')?.dataset.v || null), note: note.value, at: new Date().toLocaleTimeString() }; if (!store.set(id, s)) saved.textContent = 'could not save on this device'; else render(s); };
-  d.querySelectorAll('button').forEach(b => b.addEventListener('click', () => save(b.dataset.v)));
-  note.addEventListener('change', () => save(null));
-});
+function bindDecisions() {
+  document.querySelectorAll('.decision').forEach(d => {
+    const id = d.dataset.call, note = d.querySelector('input'), saved = d.querySelector('.saved');
+    const render = s => { d.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(!!s && b.dataset.v === s.v))); if (s) { if (document.activeElement !== note) note.value = s.note || ''; saved.textContent = `saved ${s.at}`; } };
+    render(store.get(id));
+    const save = v => { const s = { v: v ?? (d.querySelector('[aria-pressed="true"]')?.dataset.v || null), note: note.value, at: new Date().toLocaleTimeString() }; if (!store.set(id, s)) saved.textContent = 'could not save on this device'; else { render(s); renderRoster(); } };
+    d.querySelectorAll('button').forEach(b => b.addEventListener('click', () => save(b.dataset.v)));
+    note.addEventListener('change', () => save(null));
+  });
+}
+
+function renderAll() {
+  const id = (location.hash || '').replace(/^#/, '');
+  current = D.calls.find(c => c.id === id) || D.calls[0] || null;
+  renderRoster(); renderHero(); renderBreakdown(); bindDecisions();
+}
+renderAll();
+window.addEventListener('hashchange', renderAll);
 
 // ---- Detector performance (deeper insight) ----
 // Tiles
