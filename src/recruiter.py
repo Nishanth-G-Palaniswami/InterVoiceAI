@@ -70,7 +70,7 @@ class CallView(TypedDict):
     in_progress: bool
     duration_s: int | None
     score: int  # 0..100
-    band: str  # good | warn | crit
+    band: str  # good | warn | crit, or none when no answer was long enough to judge
     analysis: dict[str, Any]  # the dashboard's call dict (confidence, problems, ...)
     answers: list[AnswerView]
     transcript: list[TranscriptLine]
@@ -328,7 +328,9 @@ def _call_view(entry: dict[str, Any], record: dict[str, Any] | None) -> CallView
         )
 
     lines, restarts = transcript(events)
-    score = float((analysis.get("confidence") or {}).get("score") or 0.0)
+    confidence = analysis.get("confidence") or {}
+    score = float(confidence.get("score") or 0.0)
+    judged = bool(confidence.get("eligible_answers"))
     return CallView(
         id=entry["id"],
         candidate_id=candidate_id,
@@ -339,7 +341,7 @@ def _call_view(entry: dict[str, Any], record: dict[str, Any] | None) -> CallView
         in_progress=outcome == "in_progress",
         duration_s=duration_s,
         score=round(score * 100),
-        band=_band(score),
+        band=_band(score) if judged else "none",
         analysis=analysis,
         answers=answers,
         transcript=lines,

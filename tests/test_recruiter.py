@@ -168,6 +168,16 @@ def test_log_without_call_ended_is_live_while_fresh(env: dict[str, Path]) -> Non
     assert recruiter.roster()["applicants"][0]["latest"]["in_progress"] is True
 
 
+def test_a_call_with_nothing_to_judge_has_no_band(env: dict[str, Path]) -> None:
+    """One short answer gives the detector nothing to score; the sidebar must not
+    show that as a green "no indication"."""
+    ana = _applicant()
+    _write_log(env["calls"], "call-short", _interview(ana["id"]))
+
+    latest = recruiter.roster()["applicants"][0]["latest"]
+    assert latest["band"] == "none"
+
+
 def test_record_outcome_beats_call_ended(env: dict[str, Path]) -> None:
     """call_ended says "completed" for any normal close, even a hang-up after one
     question; Nia's record knows the interview was dropped."""
