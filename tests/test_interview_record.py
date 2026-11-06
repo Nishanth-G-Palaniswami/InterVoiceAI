@@ -89,6 +89,24 @@ def test_fluent_read_answer_is_flagged_and_hesitant_is_not() -> None:
     assert integrity["note"]
 
 
+def test_finish_refuses_while_an_answer_is_pending(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    agent = _agent()
+    q1 = agent._answers["q1"]
+    q1.main = [Turn("m", "An answer with some detail in it.", [], None)]
+    q1.follow_up_requested = True  # gate asked for the follow-up, not recorded yet
+
+    refusal = agent.finish(candidate_wants_to_stop=False)
+    assert refusal.startswith("Not finished: q1")
+    assert "follow-up" in refusal and not (tmp_path / "calls").exists()
+
+    saved = agent.finish(candidate_wants_to_stop=True)
+    assert saved.startswith("Saved.")
+    record = json.loads((tmp_path / "calls" / "t.json").read_text(encoding="utf-8"))
+    assert record["outcome"] == "stopped"
+    assert [a["recorded"] for a in record["answers"]] == [False, False, False, False]
+
+
 def test_text_only_turns_score_without_timings() -> None:
     agent = _agent()
     a = agent._answers["q3"]
