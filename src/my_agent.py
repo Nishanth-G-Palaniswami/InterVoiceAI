@@ -8,15 +8,17 @@ follow-up per answer, and records what it heard for the recruiter.
   each answer    -> record_answer gate: the first call asks for ONE detail
                     follow-up, the second call records the answer
   end            -> finish_interview writes data/calls/<room>.json (contract C2)
+                    with the integrity observations from interviewer.delivery
+                    (voice side) and interviewer.ai_text (text side)
 
-Per-word STT timings and the response onset of every candidate turn are kept in
-memory; the integrity scoring that reads them lands in a later PR.
+The candidate's turns are read from the session history, so the same code works
+on a phone call, in the Agent Console and in the text debugger. Per-word STT
+timings and the response onset are kept per turn for the voice-side signals.
 """
 
 from __future__ import annotations
 
 import logging
-import time
 from collections.abc import AsyncGenerator, AsyncIterable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -39,6 +41,8 @@ from livekit.agents.beta.tools import EndCallTool
 
 import candidates
 from candidates import Candidate, Question
+from interviewer.ai_text import Observation, call_confidence, observe, report_lines
+from interviewer.delivery import AnswerDelivery, CandTurn, features, judge
 from prompts import build_instructions
 from question_plan import generate_plan
 
@@ -46,6 +50,11 @@ logger = logging.getLogger("interview-agent")
 
 AGENT_PERSONA = "Nia"
 RESUME_CHARS_IN_PROMPT = 1500
+INTEGRITY_NOTE = (
+    "Observations for the recruiter, not a decision. Thresholds are uncalibrated."
+)
+# call_confidence bands -> the C2 verdict words the scorecard shows
+BAND_VERDICT = {"low": "natural", "medium": "inconclusive", "high": "likely_assisted"}
 
 Word = tuple[str, float, float]  # text, start_s, end_s (STT stream time)
 
@@ -54,10 +63,10 @@ Word = tuple[str, float, float]  # text, start_s, end_s (STT stream time)
 class Turn:
     """One candidate turn as the pipeline delivered it."""
 
+    item_id: str
     text: str
     words: list[Word]
     onset_ms: int | None  # silence between the agent's last word and this turn
-    at: float
 
 
 @dataclass
@@ -174,10 +183,9 @@ class InterviewAgent(Agent):
         if candidate is not None:
             self._set_plan(candidate["plan"] or [])
         # turn capture
-        self._words: list[Word] = []
-        self._pending: list[Turn] = []
-        self._last_turn: Turn | None = None
-        self._consumed: Turn | None = None
+        self._words: list[Word] = []  # timed words of the turn in progress
+        self._timings: dict[str, tuple[list[Word], int | None]] = {}  # by item id
+        self._taken: set[str] = set()  # user items already assigned to an answer
         self._agent_stopped_at: float | None = None
         self._user_started_at: float | None = None
         self._probe_logged = False
@@ -211,7 +219,6 @@ class InterviewAgent(Agent):
         self.candidate = candidate
         self.matched_by = matched_by
         self._set_plan(candidate["plan"] or [])
-        self._pending = []
 
     def _next_question(self, question_id: str) -> Question | None:
         ids = list(self._answers)
@@ -240,9 +247,18 @@ class InterviewAgent(Agent):
                         self._words.append((str(word), float(start), float(end)))
             yield ev
 
-    def _take_words(self) -> list[Word]:
-        words, self._words = self._words, []
-        return words
+    def take_words(self) -> list[list[Any]]:
+        """Timed words of the latest candidate turn, relative to its first word.
+
+        Read-only view for postcall.attach_postcall; it never clears the buffer.
+        """
+        words = self._words
+        if not words and self._timings:
+            words = next(reversed(self._timings.values()))[0]
+        if not words:
+            return []
+        t0 = words[0][1]
+        return [[w, round(s - t0, 2), round(e - t0, 2)] for w, s, e in words]
 
     def _on_agent_state(self, ev: AgentStateChangedEvent) -> None:
         if ev.new_state == "speaking":
@@ -255,40 +271,35 @@ class InterviewAgent(Agent):
             self._user_started_at = ev.created_at
 
     def _on_item_added(self, ev: ConversationItemAddedEvent) -> None:
-        # Every agent utterance starts a new answer window.
-        if isinstance(ev.item, llm.ChatMessage) and ev.item.role == "assistant":
-            self._pending = []
-
-    async def on_user_turn_completed(
-        self, turn_ctx: llm.ChatContext, new_message: llm.ChatMessage
-    ) -> None:
+        """A committed candidate message: file its word timings and onset."""
+        if not isinstance(ev.item, llm.ChatMessage) or ev.item.role != "user":
+            return
         onset_ms: int | None = None
         if self._agent_stopped_at is not None and self._user_started_at is not None:
             onset_ms = max(
                 0, round((self._user_started_at - self._agent_stopped_at) * 1000)
             )
-        turn = Turn(
-            text=new_message.text_content or "",
-            words=self._take_words(),
-            onset_ms=onset_ms,
-            at=time.time(),
-        )
-        self._pending.append(turn)
-        self._last_turn = turn
+        words, self._words = self._words, []
+        self._timings[ev.item.id] = (words, onset_ms)
 
-    def _take_turns(self) -> list[Turn]:
-        """The candidate turns since the agent last spoke; at least the latest turn."""
-        turns = self._pending
-        if (
-            not turns
-            and self._last_turn is not None
-            and self._last_turn is not self._consumed
-        ):
-            turns = [self._last_turn]
-        self._pending = []
-        if turns:
-            self._consumed = turns[-1]
-        return turns
+    def take_turns(self, history: llm.ChatContext) -> list[Turn]:
+        """Candidate messages since the agent last spoke, oldest first.
+
+        Each message is handed out once; later calls only see newer messages.
+        """
+        collected: list[Turn] = []
+        for item in reversed(history.items):
+            if not isinstance(item, llm.ChatMessage):
+                continue
+            if item.role == "assistant":
+                break
+            if item.role != "user" or item.id in self._taken:
+                continue
+            words, onset_ms = self._timings.get(item.id, ([], None))
+            collected.append(Turn(item.id, item.text_content or "", words, onset_ms))
+        collected.reverse()
+        self._taken.update(t.item_id for t in collected)
+        return collected
 
     # ---------- tools ----------
 
@@ -336,7 +347,7 @@ class InterviewAgent(Agent):
         answer = self._answers.get(question_id)
         if answer is None:
             return f"Unknown question_id {question_id!r}. Valid ids: {', '.join(self._answers)}."
-        turns = self._take_turns()
+        turns = self.take_turns(self.session.history)
         if not answer.follow_up_requested and quality_hint != "no_answer":
             answer.main = turns
             answer.follow_up_requested = True
@@ -381,6 +392,8 @@ class InterviewAgent(Agent):
         if self._written is not None:
             return self._written
         candidate = self.candidate
+        scored = [score_answer(a) for a in self._answers.values()]
+        observations = [obs for _, obs in scored if obs is not None]
         data: dict[str, Any] = {
             "schema_version": 1,
             "call_id": self.call_id,
@@ -391,29 +404,101 @@ class InterviewAgent(Agent):
             "caller_number": self.caller_number,
             "matched_by": self.matched_by,
             "outcome": outcome,
-            "answers": [
-                {
-                    "question_id": a.question["id"],
-                    "question": a.question["text"],
-                    "summary": a.summary,
-                    "quality_hint": a.quality_hint,
-                    "recorded": a.recorded,
-                    "onset_ms": a.main[0].onset_ms if a.main else None,
-                    "main": _turns_json(a.main),
-                    "follow_up": _turns_json(a.follow_up) if a.follow_up else None,
-                }
-                for a in self._answers.values()
-            ],
+            "answers": [entry for entry, _ in scored],
+            "integrity": call_integrity(observations),
         }
         self._written = candidates.save_call(self.call_id, data)
         logger.info("call record written: %s (%s)", self._written, outcome)
+        for line in report_lines(observations):
+            logger.info(line)
         return self._written
 
 
-def _turns_json(turns: list[Turn]) -> dict[str, Any]:
+# ---------- scoring glue over interviewer.delivery / interviewer.ai_text ----------
+
+
+def _cand_turns(turns: list[Turn]) -> list[CandTurn]:
+    return [
+        CandTurn(
+            turn_id=t.item_id,
+            text=t.text,
+            words=[[w, round(s, 2), round(e, 2)] for w, s, e in t.words],
+        )
+        for t in turns
+    ]
+
+
+def _side(turns: list[Turn], feats: Any) -> dict[str, Any]:
     text = " ".join(t.text for t in turns).strip()
+    out = {"text": text, "word_count": len(text.split())}
+    out.update(vars(feats))  # words, seconds, wpm, *_per100
+    return out
+
+
+def score_answer(a: Answer) -> tuple[dict[str, Any], Observation | None]:
+    """One C2 answer entry plus the observation used for the call verdict.
+
+    A question the candidate never answered gets no observation at all.
+    """
+    if not a.main:
+        entry = {
+            "question_id": a.question["id"],
+            "question": a.question["text"],
+            "summary": a.summary,
+            "quality_hint": a.quality_hint,
+            "recorded": a.recorded,
+            "onset_ms": None,
+            "main": None,
+            "follow_up": None,
+            "signals": [],
+            "sounds_read": False,
+            "verdict": "not_answered",
+            "text_signals": None,
+        }
+        return entry, None
+    main_f = features(_cand_turns(a.main))
+    follow_f = features(_cand_turns(a.follow_up)) if a.follow_up else None
+    signals, sounds_read, eligible = judge(main_f, follow_f)
+    onset_ms = a.main[0].onset_ms if a.main else None
+    delivery = AnswerDelivery(
+        question_id=a.question["id"],
+        onset_ms=onset_ms,
+        main=main_f,
+        follow_up=follow_f,
+        signals=signals,
+        sounds_read=sounds_read,
+        eligible=eligible,
+        turn_ids=[t.item_id for t in [*a.main, *a.follow_up]],
+    )
+    main_text = " ".join(t.text for t in a.main).strip()
+    obs = observe(a.question["id"], main_text, delivery)
+    entry = {
+        "question_id": a.question["id"],
+        "question": a.question["text"],
+        "summary": a.summary,
+        "quality_hint": a.quality_hint,
+        "recorded": a.recorded,
+        "onset_ms": onset_ms,
+        "main": _side(a.main, main_f),
+        "follow_up": _side(a.follow_up, follow_f) if follow_f else None,
+        "signals": obs.evidence,
+        "sounds_read": sounds_read,
+        "verdict": obs.verdict,
+        "text_signals": obs.text.to_dict(),
+    }
+    return entry, obs
+
+
+def call_integrity(observations: list[Observation]) -> dict[str, Any]:
+    conf = call_confidence(observations)
     return {
-        "text": text,
-        "word_count": len(text.split()),
-        "words": [[w, round(s, 2), round(e, 2)] for t in turns for w, s, e in t.words],
+        "verdict": BAND_VERDICT[conf["band"]],
+        "band": conf["band"],
+        "score": conf["score"],
+        "flagged_answers": len(conf["flagged"]),
+        "flagged": conf["flagged"],
+        "strong": conf["strong"],
+        "eligible_answers": conf["eligible_answers"],
+        "evidence": [f"{o.question_id}: {e}" for o in observations for e in o.evidence],
+        "note": INTEGRITY_NOTE,
     }

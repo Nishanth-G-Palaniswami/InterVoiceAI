@@ -34,3 +34,6 @@ KMS
 
 # InterviewAI runtime data (candidate profiles, call records)
 data/
+
+# post-interview analysis: live call event dumps (candidate speech)
+calls/

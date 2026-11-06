@@ -191,7 +191,7 @@ Optional: `AGENT_PHONE=+1646...` in `.env.local` shows "Now call ..." on the con
 ```powershell
 $base = "D:/Projects/IntervoiceAI/take2-voice-agent-hackathon-starter"
 # 1. .txt upload -> expect "HTTP/1.1 303 See Other" and "location: /candidates/c_..."
-curl.exe -s -i -F "resume=@$base/examples/resume.sample.txt" -F "name=Maria Lopez" -F "phone=(212) 555-0142" `
+curl.exe -s -i -F "resume=@$base/examples/resume.sample.txt" -F "name=Maria Lopez" --form-string "phone=(212) 555-0142" `
   -F "email=maria@example.com" -F "role=Registered Nurse, Med-Surg" -F "company=Harbor Health" -F "education=BSN, Hunter College, 2021" `
   -F "years_experience=3" -F "current_job=Night-shift RN on a 32-bed med-surg unit" -F "biggest_project=Led the unit fall-prevention rollout" `
   -F "why_this_role=Move to a teaching hospital" http://127.0.0.1:3001/apply | Select-String "HTTP/|location"
