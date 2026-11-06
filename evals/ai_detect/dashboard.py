@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import pathlib
 import random
 import subprocess
@@ -20,6 +21,11 @@ import sys
 from collections import defaultdict
 
 HERE = pathlib.Path(__file__).resolve().parent
+try:  # .env.local may hold DATABASE_URL_READONLY
+    from dotenv import load_dotenv
+    load_dotenv(HERE.parents[1] / '.env.local')
+except ImportError:
+    pass
 sys.path.insert(0, str(HERE.parents[1] / "src"))
 sys.path.insert(0, str(HERE))
 
@@ -73,13 +79,16 @@ def tier_table(rows: list[dict]) -> list[dict]:
     return out
 
 
-def analyzed_calls(sources: list[pathlib.Path]) -> list[dict]:
+def analyzed_calls(sources: list[pathlib.Path], extra: list[tuple[str, list[dict]]] | None = None) -> list[dict]:
     calls = []
-    for p in sources:
+    feeds: list[tuple[str, list[dict] | None, pathlib.Path | None]] = [(p.stem, None, p) for p in sources]
+    feeds = [(cid, evs, None) for cid, evs in (extra or [])] + feeds
+    for cid, events, p in feeds:
         try:
-            events = load_events(p)
+            if events is None:
+                events = load_events(p)
         except Exception as e:  # a half-written dump should not kill the dashboard
-            calls.append({"id": p.stem, "error": str(e), "answers": []})
+            calls.append({"id": cid, "error": str(e), "answers": []})
             continue
         deliveries = {d.question_id: d for d in answer_delivery(events)}
         texts = answer_texts(events)
@@ -92,22 +101,60 @@ def analyzed_calls(sources: list[pathlib.Path]) -> list[dict]:
             d["confidence"] = answer_confidence(o)
             answers.append(d)
         calls.append({
-            "id": p.stem.replace(".events", ""), "started_at": started, "outcome": ended.get("outcome"),
+            "id": cid.replace(".events", ""), "started_at": started, "outcome": ended.get("outcome"),
             "duration_s": ended.get("duration_s"), "turns": sum(1 for e in events if e.get("type") == "turn"),
             "confidence": call_confidence(obs), "problems": problem_areas(obs, events), "answers": answers,
         })
     return calls
 
 
-def build_data(call_sources: list[pathlib.Path]) -> dict:
+def neon_calls(db_url: str, hours: float = 6.0, limit: int = 8) -> list[tuple[str, list[dict]]]:
+    """Events for the most recent calls from the reference product's `agent_events` table (BUILD_PLAN §9).
+    Read-only; polled on every refresh in --serve mode so a call in progress fills in as its events land."""
+    import psycopg
+
+    sql = """
+        with recent as (
+            select call_id, max(created_at) as last_at from agent_events
+            where created_at > now() - (%s * interval '1 hour')
+            group by call_id order by last_at desc limit %s)
+        select e.call_id, e.seq, e.type, e.payload, e.occurred_at
+        from agent_events e join recent r on r.call_id = e.call_id
+        order by r.last_at desc, e.seq"""
+    out: dict[str, list[dict]] = {}
+    with psycopg.connect(db_url, connect_timeout=5) as conn, conn.cursor() as cur:
+        try:
+            cur.execute(sql, (hours, limit))
+        except psycopg.errors.UndefinedColumn:  # no created_at column: fall back to the newest call_ids by seq
+            conn.rollback()
+            cur.execute("""select e.call_id, e.seq, e.type, e.payload, null from agent_events e
+                           where e.call_id in (select call_id from agent_events group by call_id
+                                               order by max(seq) desc limit %s) order by e.call_id, e.seq""", (limit,))
+        for call_id, seq, type_, payload, occurred_at in cur.fetchall():
+            if isinstance(payload, str):
+                payload = json.loads(payload)
+            out.setdefault(str(call_id), []).append({"call_id": call_id, "seq": seq, "type": type_, "payload": payload,
+                                                     "occurred_at": str(occurred_at) if occurred_at else None})
+    return list(out.items())
+
+
+def build_data(call_sources: list[pathlib.Path], db_url: str | None = None) -> dict:
     rows = evaluate(load_fixtures(), "synthetic")
+    extra: list[tuple[str, list[dict]]] = []
+    db_error = None
+    if db_url:
+        try:
+            extra = neon_calls(db_url)
+        except Exception as e:  # the dashboard must render even when the database is unreachable
+            db_error = f"{type(e).__name__}: {str(e)[:160]}"
     return {
+        "db_feed": bool(db_url), "db_error": db_error,
         "generated_at": dt.datetime.now().astimezone().isoformat(timespec="minutes"),
         "n_fixtures": len(rows),
         "detectors": detector_table(rows),
         "tiers": tier_table(rows),
         "fixtures": [{k: r[k] for k in ("id", "tier", "words", "verdict", "text_signals", "reads_generated", "sounds_read", "evidence")} for r in rows],
-        "calls": analyzed_calls(call_sources),
+        "calls": analyzed_calls(call_sources, extra),
     }
 
 
@@ -234,7 +281,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--s1);outline-off
 <script>
 const D = JSON.parse(document.getElementById('data').textContent);
 const pct = x => x == null ? 'n/a' : Math.round(x * 100) + '%';
-document.getElementById('stamp').insertAdjacentText('beforeend', ` Generated ${D.generated_at} · ${D.n_fixtures} labelled answers · ${D.calls.length} call(s)`);
+document.getElementById('stamp').insertAdjacentText('beforeend', ` Generated ${D.generated_at} · ${D.n_fixtures} labelled answers · ${D.calls.length} call(s)` + (D.db_feed ? (D.db_error ? ` · database feed error: ${D.db_error}` : ' · database feed on') : ' · local files only'));
 
 // Tiles
 const both = D.detectors.find(d => d.name === 'Both sides agree');
@@ -328,22 +375,22 @@ def call_sources(calls: pathlib.Path) -> list[pathlib.Path]:
     return [calls] if calls.exists() else []
 
 
-def render(calls: pathlib.Path, live: bool, refresh_s: int = 4) -> str:
-    data = build_data(call_sources(calls))
+def render(calls: pathlib.Path, live: bool, refresh_s: int = 4, db_url: str | None = None) -> str:
+    data = build_data(call_sources(calls), db_url)
     html = HTML.replace("__DATA__", json.dumps(data, default=str).replace("</", "<\\/"))
     html = html.replace("__LIVE_META__", f'<meta http-equiv="refresh" content="{refresh_s}">' if live else "")
     html = html.replace("__LIVE_BADGE__", '<span style="color:var(--crit);font-weight:600">● LIVE</span> refreshing every %d s ·' % refresh_s if live else "")
     return html
 
 
-def serve(calls: pathlib.Path, port: int, refresh_s: int) -> None:
+def serve(calls: pathlib.Path, port: int, refresh_s: int, db_url: str | None = None) -> None:
     """Demo mode: rebuild the page on every request; the page refreshes itself, so a call in progress shows each
     answer's verdict as the agent records it (the worker appends events to calls/*.events.jsonl live)."""
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
     class H(BaseHTTPRequestHandler):
         def do_GET(self):
-            body = render(calls, live=True, refresh_s=refresh_s).encode()
+            body = render(calls, live=True, refresh_s=refresh_s, db_url=db_url).encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
@@ -365,13 +412,15 @@ def main() -> None:
     ap.add_argument("--open", action="store_true")
     ap.add_argument("--serve", type=int, metavar="PORT", help="live demo mode: serve and auto-refresh")
     ap.add_argument("--refresh", type=int, default=4, help="seconds between refreshes in --serve mode")
+    ap.add_argument("--db", default=os.environ.get("DATABASE_URL_READONLY") or None,
+                    help="Postgres URL of the reference product's database (agent_events); default $DATABASE_URL_READONLY")
     args = ap.parse_args()
     if args.serve:
         if args.open:
             subprocess.Popen(["open", f"http://127.0.0.1:{args.serve}"])
-        serve(args.calls, args.serve, args.refresh)
+        serve(args.calls, args.serve, args.refresh, args.db)
         return
-    html = render(args.calls, live=False)
+    html = render(args.calls, live=False, db_url=args.db)
     args.out.write_text(html)
     print(f"wrote {args.out}")
     if args.open:
