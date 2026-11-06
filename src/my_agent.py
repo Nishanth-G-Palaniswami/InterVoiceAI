@@ -193,6 +193,9 @@ class InterviewAgent(Agent):
         self._probe_logged = False
         self._written: Path | None = None
         self.identity_confirmed: bool | None = None
+        # user messages in the history when the identity check was asked;
+        # confirm_identity is only valid once the candidate has spoken since
+        self._identity_baseline = 0
         # postcall event dump (set by agent.py); emits tool_record_answer once
         # per recorded answer so the analysis lane splits main/follow-up right
         self.postcall: Any | None = None
@@ -333,9 +336,10 @@ class InterviewAgent(Agent):
             candidates.save(match)
         self._set_candidate(match, "name")
         await self.update_instructions(build_instructions(render_prompt(match)))
+        self._identity_baseline = _user_messages(self.session.history)
         return (
-            f"Found {match['name']}, applying for {match['role']}. Confirm that is "
-            f"them, then call confirm_identity."
+            f"Found {match['name']}, applying for {match['role']}. Ask them to "
+            f"confirm that is them, wait for the answer, then call confirm_identity."
         )
 
     @function_tool
@@ -345,6 +349,11 @@ class InterviewAgent(Agent):
         Args:
             confirmed: true if they confirmed, false if they said they are someone else.
         """
+        if _user_messages(self.session.history) <= self._identity_baseline:
+            return (
+                "Not yet: the candidate has not answered the identity check. Ask "
+                "them to confirm, wait for the answer, then call confirm_identity."
+            )
         self.identity_confirmed = confirmed
         if not confirmed or not self._answers:
             return "Ask for the full name they applied with, then call claim_by_name."
@@ -464,6 +473,14 @@ class InterviewAgent(Agent):
         for line in report_lines(observations):
             logger.info(line)
         return self._written
+
+
+def _user_messages(history: llm.ChatContext) -> int:
+    return sum(
+        1
+        for item in history.items
+        if isinstance(item, llm.ChatMessage) and item.role == "user"
+    )
 
 
 # ---------- scoring glue over interviewer.delivery / interviewer.ai_text ----------
