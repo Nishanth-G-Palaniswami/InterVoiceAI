@@ -320,8 +320,8 @@ class InterviewAgent(Agent):
             first = next(iter(self._answers.values())).question
             return (
                 f"No application found for {full_name!r}. Say you will run a short "
-                f"general screen and the team will match it to their application "
-                f"afterwards. Then ask {first['id']} exactly as written: {first['text']}"
+                f"general screen now and the recruiting team will follow up about "
+                f"applying. Then ask {first['id']} exactly as written: {first['text']}"
             )
         if match["plan"] is None:
             match["plan"] = await generate_plan(match)
