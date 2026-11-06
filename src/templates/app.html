@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InterVoiceAI</title>
+<style>
+/* Design tokens and verdict components from the post-interview dashboard (evals/ai_detect/dashboard.py). */
+:root{
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781; --grid:#e1e0d9; --axis:#c3c2b7;
+  --s1:#2a78d6; --s2:#eb6834; --good:#0ca30c; --warn:#fab219; --crit:#d03b3b; --warn-ink:#0b0b0b;
+  --agent:#eef3fb; --cand:#f3f2ee;
+  --sans:system-ui,-apple-system,"Segoe UI",sans-serif; --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781; --grid:#2c2c2a; --axis:#383835;
+  --s1:#3987e5; --s2:#d95926; --agent:#16233a; --cand:#242422; color-scheme:dark; } }
+:root[data-theme="dark"]{ --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --grid:#2c2c2a; --axis:#383835; --s1:#3987e5; --s2:#d95926; --agent:#16233a; --cand:#242422; color-scheme:dark; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+a{color:var(--s1)}
+button{font:inherit}
+button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+
+/* ---- shell ---- */
+.top{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;justify-content:space-between;padding:16px max(16px,env(safe-area-inset-left,0px)) 12px;border-bottom:1px solid var(--grid);background:var(--surface)}
+.brand{font-size:20px;font-weight:700;letter-spacing:-.01em;margin:0}
+.brand span{color:var(--muted);font-weight:500;font-size:14px;margin-left:8px}
+.stamp{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.stamp b{color:var(--ink)}
+.layout{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:calc(100vh - 58px)}
+aside{border-right:1px solid var(--grid);padding:14px 12px 24px;background:var(--page);position:sticky;top:0;align-self:start;max-height:100vh;overflow-y:auto}
+main{padding:20px max(16px,2vw) 48px;min-width:0;max-width:1100px}
+.newbtn{display:block;width:100%;text-align:center;font-weight:600;padding:10px 12px;border-radius:8px;border:1px solid var(--s1);background:var(--s1);color:#fff;cursor:pointer;text-decoration:none}
+.newbtn[aria-current="page"]{box-shadow:inset 0 0 0 2px var(--page)}
+.k{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.sidehead{display:flex;justify-content:space-between;align-items:baseline;margin:18px 4px 6px}
+.list{display:grid;gap:6px}
+.card{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--grid);border-radius:8px;padding:9px 11px;cursor:pointer;color:var(--ink);min-width:0;text-decoration:none}
+.card:hover{border-color:var(--axis)}
+.card[aria-current="page"]{border-color:var(--s1);box-shadow:inset 0 0 0 1px var(--s1)}
+.cname{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crole{font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:1px 0 5px}
+.cmeta{display:flex;flex-wrap:wrap;gap:4px 8px;font-size:12px;color:var(--muted);align-items:center;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;min-width:28px;text-align:center;font-weight:700;font-size:12px;padding:1px 6px;border-radius:999px;color:#fff}
+.pill.crit{background:var(--crit)}.pill.warn{background:var(--warn);color:var(--warn-ink)}.pill.good{background:var(--good)}.pill.none{background:var(--grid);color:var(--ink2)}
+.live{color:var(--crit);font-weight:600}
+.live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--crit);margin-right:5px;vertical-align:1px;animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.live::before{animation:none}}
+.dec{font-weight:600}
+.dec.go{color:var(--good)}.dec.nogo{color:var(--crit)}.dec.hold{color:var(--ink)}
+.empty{color:var(--muted);font-style:italic}
+
+/* ---- panels ---- */
+h1{font-size:26px;margin:0;letter-spacing:-.01em;line-height:1.2}
+h2{font-size:18px;margin:30px 0 10px}
+.panel{background:var(--surface);border:1px solid var(--grid);border-radius:8px;padding:14px 16px}
+.sub{color:var(--ink2);margin:4px 0 0;max-width:72ch}
+.personhead{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.contact{color:var(--ink2);font-size:14px;margin-top:4px}
+.contact span+span::before{content:" · ";color:var(--muted)}
+
+/* ---- decision ---- */
+.decision{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.decision .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-right:4px}
+.decision button{font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--axis);background:var(--surface);color:var(--ink);cursor:pointer}
+.decision button[aria-pressed="true"].go{background:var(--good);color:#fff;border-color:var(--good)}
+.decision button[aria-pressed="true"].nogo{background:var(--crit);color:#fff;border-color:var(--crit)}
+.decision button[aria-pressed="true"].hold{background:var(--warn);color:var(--warn-ink);border-color:var(--warn)}
+.decision input{font:inherit;font-size:13px;padding:6px 10px;border-radius:6px;border:1px solid var(--axis);background:var(--surface);color:var(--ink);flex:1 1 220px;min-width:0}
+.decision .saved{font-size:12px;color:var(--muted)}
+.decision .saved.err{color:var(--crit)}
+
+/* ---- call switcher ---- */
+.calltabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.calltabs button{font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--axis);background:var(--surface);color:var(--ink2);cursor:pointer}
+.calltabs button[aria-pressed="true"]{border-color:var(--s1);color:var(--ink);box-shadow:inset 0 0 0 1px var(--s1)}
+
+/* ---- verdict hero ---- */
+.herogrid{display:grid;grid-template-columns:1fr 240px;gap:12px;margin-bottom:12px}
+.verdict{border-radius:10px;padding:16px 20px;border:1px solid var(--grid);background:var(--surface);border-left:8px solid var(--good)}
+.verdict.crit{border-left-color:var(--crit)}.verdict.warn{border-left-color:var(--warn)}.verdict.good{border-left-color:var(--good)}
+.vtitle{font-size:26px;font-weight:700;letter-spacing:-.01em;margin:6px 0 4px;line-height:1.15}
+.vsub{color:var(--ink2);max-width:70ch}
+.vmeta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:14px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.vmeta b{color:var(--ink)}
+.scorecard{border-radius:10px;padding:16px 20px;border:1px solid var(--grid);background:var(--surface);display:flex;flex-direction:column;justify-content:center}
+.scorecard .big{font-size:52px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;margin:6px 0 10px}
+.scorecard .of{font-size:18px;color:var(--muted);font-weight:500;margin-left:4px}
+.meter{width:100%;height:8px;background:var(--grid);border-radius:4px;position:relative}
+.meter i{display:block;height:100%;border-radius:4px}
+.meter .thr{position:absolute;top:-4px;width:2px;height:16px;background:var(--ink);opacity:.6}
+.scorecard .b{font-size:13px;color:var(--ink2);margin-top:8px}
+.reasons ul{margin:8px 0 0;padding-left:18px;display:grid;gap:8px}
+.reasons li{font-size:14px;color:var(--ink2)}
+.reasons li b{color:var(--ink)}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.badge.crit{background:var(--crit);color:#fff}.badge.warn{background:var(--warn);color:var(--warn-ink)}.badge.good{background:var(--good);color:#fff}.badge.mute{background:var(--grid);color:var(--ink2)}
+.sev{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:2px 6px;border-radius:4px;text-align:center;align-self:start}
+.sev.high{background:var(--crit);color:#fff}.sev.medium{background:var(--warn);color:var(--warn-ink)}.sev.low{background:var(--grid);color:var(--ink2)}
+.problems{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:4px}
+.problems li{font-size:13px;color:var(--ink2);display:grid;grid-template-columns:70px 1fr;gap:10px}
+
+/* ---- answers ---- */
+.answers{display:grid;gap:10px}
+.ans{background:var(--surface);border:1px solid var(--grid);border-radius:8px;padding:12px 16px}
+.ans .q{display:flex;gap:10px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
+.qid{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.qtext{font-weight:600;margin:2px 0 6px}
+.summary{margin:0 0 8px}
+.hint{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--grid);color:var(--ink2)}
+.hint.adequate{background:var(--good);color:#fff}.hint.thin{background:var(--warn);color:var(--warn-ink)}.hint.no_answer{background:var(--crit);color:#fff}
+.metrics{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.metrics b{color:var(--ink);font-weight:600}
+ul.ev{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink2)}
+
+/* ---- transcript ---- */
+.transcript{display:grid;gap:8px}
+.line{display:grid;grid-template-columns:52px minmax(0,1fr);gap:10px;align-items:start}
+.line .t{font-family:var(--mono);font-size:12px;color:var(--muted);padding-top:9px;text-align:right;font-variant-numeric:tabular-nums}
+.bubble{border-radius:10px;padding:8px 12px;max-width:72ch;border:1px solid var(--grid)}
+.bubble .who{font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:2px}
+.line.agent .bubble{background:var(--agent)}
+.line.candidate .bubble{background:var(--cand);justify-self:end}
+.cut{font-size:11px;font-weight:600;color:var(--crit);margin-left:6px}
+.marker{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);margin:4px 0}
+.marker::before,.marker::after{content:"";flex:1;border-top:1px dashed var(--axis)}
+.marker.restart{color:var(--crit)}
+.marker.answer{color:var(--good)}
+
+/* ---- application ---- */
+dl.facts{display:grid;grid-template-columns:180px 1fr;gap:6px 16px;margin:0}
+dl.facts dt{color:var(--muted);font-size:13px}
+dl.facts dd{margin:0}
+pre.resume{white-space:pre-wrap;font-family:var(--sans);font-size:14px;background:var(--page);border:1px solid var(--grid);border-radius:6px;padding:10px 12px;margin:8px 0 4px;max-height:320px;overflow:auto}
+ol.plan{margin:6px 0 0;padding-left:20px;display:grid;gap:6px}
+small,.small{font-size:13px;color:var(--muted)}
+
+/* ---- apply form ---- */
+form.apply{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;max-width:760px}
+form.apply .full{grid-column:1/-1}
+form.apply label{display:block;margin-top:12px;font-weight:600;font-size:14px}
+form.apply label small{font-weight:400}
+form.apply input,form.apply textarea{width:100%;padding:8px 10px;font:inherit;border:1px solid var(--axis);border-radius:6px;background:var(--surface);color:var(--ink)}
+form.apply input[type=file]{padding:6px}
+form.apply button{margin-top:18px;justify-self:start;padding:10px 22px;border-radius:8px;border:0;background:var(--s1);color:#fff;font-weight:600;cursor:pointer}
+.errors{border:1px solid var(--crit);border-left:6px solid var(--crit);border-radius:8px;padding:10px 14px;margin:12px 0;background:var(--surface);max-width:760px}
+.errors ul{margin:4px 0 0;padding-left:18px}
+.callnow{margin-top:12px;font-weight:600}
+
+/* ---- how it works ---- */
+details.method{margin-top:40px}
+details.method summary{cursor:pointer;font-weight:600;font-size:16px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}
+.tile{background:var(--surface);border:1px solid var(--grid);border-radius:8px;padding:12px 14px;min-width:0}
+.tile .v{font-size:30px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1;margin:4px 0 2px}
+.tile .b{font-size:13px;color:var(--ink2)}
+.bars{display:grid;gap:10px;margin-top:6px}
+.barrow{display:grid;grid-template-columns:minmax(120px,240px) 1fr;gap:10px;align-items:center;font-size:13px}
+.barpair{display:grid;gap:3px}
+.bar{height:9px;border-radius:3px;min-width:2px}
+.bar.catch{background:var(--s1)}.bar.ff{background:var(--s2)}
+.legend{display:flex;gap:16px;font-size:13px;color:var(--ink2);margin:10px 0 6px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.methodgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin-top:12px}
+.methodgrid p{margin:4px 0 0;font-size:14px;color:var(--ink2)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--grid)}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+
+[hidden]{display:none !important}
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr}
+  aside{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--grid)}
+  .list{grid-auto-flow:column;grid-auto-columns:minmax(200px,1fr);overflow-x:auto;padding-bottom:4px}
+  .herogrid{grid-template-columns:1fr}
+  form.apply{grid-template-columns:1fr}
+  dl.facts{grid-template-columns:1fr}
+  dl.facts dd{margin-bottom:6px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <p class="brand">InterVoiceAI<span>AI phone screens with an integrity read</span></p>
+  <div class="stamp" id="stamp">{% if agent_phone %}Interview line <b>{{ agent_phone }}</b> · {% endif %}<span id="updated">loading…</span></div>
+</header>
+
+<div class="layout">
+<aside aria-label="Applicants">
+  <a class="newbtn" href="#new" id="newlink">+ New application</a>
+  <div class="sidehead"><span class="k" id="applicants-k">Applicants</span></div>
+  <nav class="list" id="applicants"></nav>
+  <div id="unmatched-wrap" hidden>
+    <div class="sidehead"><span class="k" id="unmatched-k">Calls with no application</span></div>
+    <nav class="list" id="unmatched"></nav>
+  </div>
+</aside>
+
+<main>
+  <section id="pane-new" hidden>
+    <h1>Apply</h1>
+    <p class="sub">Tell us about yourself and upload your resume. The phone interviewer prepares its questions from what you submit here.</p>
+    {% if errors %}
+    <div class="errors" role="alert" id="apply-errors"><b>Fix these and submit again:</b>
+      <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    <form class="apply" method="post" action="/apply" enctype="multipart/form-data">
+      <div><label for="name">Name</label><input id="name" name="name" type="text" required value="{{ form.name or '' }}"></div>
+      <div><label for="phone">Phone <small>(the number you'll call from)</small></label><input id="phone" name="phone" type="tel" required placeholder="(212) 555-0142" value="{{ form.phone or '' }}"></div>
+      <div><label for="email">Email</label><input id="email" name="email" type="email" value="{{ form.email or '' }}"></div>
+      <div><label for="role">Role applying for</label><input id="role" name="role" type="text" required value="{{ form.role or '' }}"></div>
+      <div><label for="company">Company <small>(optional)</small></label><input id="company" name="company" type="text" value="{{ form.company or '' }}"></div>
+      <div><label for="education">Education</label><input id="education" name="education" type="text" value="{{ form.education or '' }}"></div>
+      <div><label for="years_experience">Years of experience</label><input id="years_experience" name="years_experience" type="number" min="0" max="60" value="{{ form.years_experience or '' }}"></div>
+      <div class="full"><label for="current_job">What do you do in your current job?</label><textarea id="current_job" name="current_job" rows="3" maxlength="600">{{ form.current_job or '' }}</textarea></div>
+      <div class="full"><label for="biggest_project">Biggest project you have shipped?</label><textarea id="biggest_project" name="biggest_project" rows="3" maxlength="600">{{ form.biggest_project or '' }}</textarea></div>
+      <div class="full"><label for="why_this_role">Why this role?</label><textarea id="why_this_role" name="why_this_role" rows="3" maxlength="600">{{ form.why_this_role or '' }}</textarea></div>
+      <div class="full"><label for="resume">Resume <small>(.pdf or .txt, up to 5 MB{% if errors %}; choose it again{% endif %})</small></label><input id="resume" name="resume" type="file" required accept=".pdf,.txt"></div>
+      <button type="submit">Apply</button>
+    </form>
+  </section>
+
+  <section id="pane-report" hidden aria-live="polite"></section>
+
+  <section id="pane-empty" hidden>
+    <h1>Applicants</h1>
+    <p class="sub">Pick an applicant on the left to see their application, interview answers, integrity read and transcript, or start a new application.</p>
+  </section>
+
+  <details class="method" id="method">
+    <summary>How the integrity score works</summary>
+    <div id="method-body"><p class="empty">Loading the detector results…</p></div>
+  </details>
+</main>
+</div>
+
+<script id="boot" type="application/json">{{ {"agent_phone": agent_phone, "has_errors": errors|length > 0}|tojson }}</script>
+{% raw %}
+<script>
+"use strict";
+const BOOT = JSON.parse(document.getElementById('boot').textContent);
+const POLL_MS = 4000;
+const THRESHOLD = 0.6;  // dashboard: confidence at or above this = "likely AI-assisted"
+
+// ---------- helpers ----------
+const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const $ = id => document.getElementById(id);
+const DEC_LABEL = { go: 'Go', hold: 'Follow up', nogo: 'No-go' };
+const OUTCOME = { completed: 'Completed', stopped: 'Stopped early', dropped: 'Hung up', in_progress: 'Live now', incomplete: 'Ended without a record' };
+const badge = v => ({ ai_assisted: ['crit', '● AI-assisted'], reads_generated: ['warn', '▲ reads generated'], sounds_read: ['warn', '▲ sounds read'], none: ['good', '✓ no flags'], ineligible: ['mute', '– too short to judge'] }[v] || ['mute', v]);
+const clock = s => s == null ? '' : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const phone = raw => { const d = String(raw ?? '').replace(/\D/g, ''); const t = d.length === 11 && d[0] === '1' ? d.slice(1) : d;
+  return t.length === 10 ? `(${t.slice(0, 3)}) ${t.slice(3, 6)}-${t.slice(6)}` : String(raw ?? ''); };
+const when = iso => { if (!iso) return ''; const d = new Date(iso); return d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
+async function getJSON(url) {
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+  return r.json();
+}
+
+// ---------- state ----------
+let roster = null;              // /api/roster
+let report = null;              // the open applicant or call
+let reportSig = '';             // what the open report looked like in the roster when fetched
+const pickedCall = {};          // subject -> selected call id
+
+function route() {
+  const h = decodeURIComponent((location.hash || '').slice(1));
+  if (h === 'new') return { kind: 'new' };
+  if (h.startsWith('call:')) return { kind: 'call', id: h.slice(5) };
+  if (h) return { kind: 'candidate', id: h };
+  return { kind: 'none' };
+}
+
+// ---------- sidebar ----------
+function scorePill(latest) {
+  if (!latest) return '<span class="pill none" title="No call yet">–</span>';
+  return `<span class="pill ${esc(latest.band)}" title="Integrity score">${esc(latest.score)}</span>`;
+}
+function callStatus(latest) {
+  if (!latest) return '<span>Not called yet</span>';
+  if (latest.in_progress) return '<span class="live">Live</span>';
+  return `<span>${esc(OUTCOME[latest.outcome] || latest.outcome)} · ${esc(latest.recorded)}/${esc(latest.questions)}</span>`;
+}
+function decTag(d) { return d && d.v ? `<span class="dec ${esc(d.v)}">${esc(DEC_LABEL[d.v])}</span>` : ''; }
+
+function renderSidebar() {
+  const r = route();
+  $('newlink').setAttribute('aria-current', r.kind === 'new' ? 'page' : 'false');
+  const apps = roster.applicants;
+  $('applicants-k').textContent = `Applicants (${apps.length})`;
+  $('applicants').innerHTML = apps.length ? apps.map(a => `
+    <a class="card" href="#${encodeURIComponent(a.id)}" data-id="${esc(a.id)}" aria-current="${r.kind === 'candidate' && r.id === a.id ? 'page' : 'false'}">
+      <div class="cname">${esc(a.name)}</div>
+      <div class="crole">${esc(a.role)}${a.company ? ' · ' + esc(a.company) : ''}</div>
+      <div class="cmeta">${scorePill(a.latest)}${callStatus(a.latest)}${decTag(a.decision)}</div>
+    </a>`).join('') : '<p class="empty">No applicants yet.</p>';
+  const un = roster.unmatched;
+  $('unmatched-wrap').hidden = !un.length;
+  $('unmatched-k').textContent = `Calls with no application (${un.length})`;
+  $('unmatched').innerHTML = un.map(c => `
+    <a class="card" href="#call:${encodeURIComponent(c.id)}" data-id="${esc(c.id)}" aria-current="${r.kind === 'call' && r.id === c.id ? 'page' : 'false'}">
+      <div class="cname">${esc(c.caller_number ? phone(c.caller_number) : 'Unknown caller')}</div>
+      <div class="crole">${esc(when(c.started_at))}</div>
+      <div class="cmeta">${scorePill(c)}${callStatus(c)}${decTag(c.decision)}</div>
+    </a>`).join('');
+  const live = [...apps.map(a => a.latest), ...un].filter(c => c && c.in_progress).length;
+  $('updated').innerHTML = `${live ? `<span class="live">${live} live call${live > 1 ? 's' : ''}</span> · ` : ''}updated ${esc(new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }))}`;
+}
+
+function rosterEntry(r) {
+  if (r.kind === 'candidate') { const a = roster.applicants.find(x => x.id === r.id); return a ? a.latest : undefined; }
+  if (r.kind === 'call') return roster.unmatched.find(x => x.id === r.id);
+  return undefined;
+}
+const sigOf = e => e === undefined ? 'missing' : JSON.stringify(e && [e.id, e.outcome, e.recorded, e.score, e.in_progress]);
+
+// ---------- report ----------
+function decisionBar(subject, d) {
+  const on = v => String(!!d && d.v === v);
+  return `<div class="decision" id="decision" data-subject="${esc(subject)}"><span class="lbl">Your decision</span>
+    <button type="button" class="go" data-v="go" aria-pressed="${on('go')}">Go</button>
+    <button type="button" class="hold" data-v="hold" aria-pressed="${on('hold')}">Follow up</button>
+    <button type="button" class="nogo" data-v="nogo" aria-pressed="${on('nogo')}">No-go</button>
+    <input type="text" maxlength="500" placeholder="Why" aria-label="Decision note" value="${esc(d ? d.note : '')}">
+    <span class="saved" aria-live="polite">${d ? 'saved ' + esc(when(d.at)) : ''}</span></div>`;
+}
+
+function hero(call) {
+  const a = call.analysis || {};
+  const conf = a.confidence || { score: 0, band: 'low', eligible_answers: 0, strong: [], flagged: [] };
+  const score = Math.round((conf.score || 0) * 100);
+  const v = conf.score >= THRESHOLD ? ['crit', 'Likely AI-assisted', 'Above the threshold. Text and voice signals agree on at least one answer.']
+          : conf.band === 'medium' ? ['warn', 'Possible AI assistance', 'Below the threshold. One side flagged, or the agreement is weak. Read the reasons before deciding.']
+          : ['good', 'No indication of AI assistance', 'Below the threshold on every recorded answer so far.'];
+  const answers = a.answers || [];
+  const reasons = [];
+  answers.forEach(x => {
+    if (['ai_assisted', 'reads_generated', 'sounds_read'].includes(x.verdict)) {
+      const [cls, lab] = badge(x.verdict);
+      reasons.push(`<li><span class="badge ${cls}">${esc(lab)}</span> <b>${esc(x.question_id)}</b> (answer score ${Math.round((x.confidence || 0) * 100)}): ${esc((x.evidence || []).slice(0, 4).join('; '))}</li>`);
+    }
+  });
+  (a.problems || []).filter(p => p.severity === 'high' && !answers.some(x => x.question_id === p.area))
+    .forEach(p => reasons.push(`<li><span class="sev high">high</span> <b>${esc(p.area)}</b>: ${esc(p.note)}</li>`));
+  const total = answers.length;
+  const state = call.in_progress ? '<span class="live">Call in progress</span>' : esc(OUTCOME[call.outcome] || call.outcome);
+  return `
+    <div class="herogrid">
+      <div class="verdict ${v[0]}">
+        <div class="k">${state} · ${esc(when(call.started_at))}${call.duration_s != null ? ' · ' + esc(clock(call.duration_s)) : ''}</div>
+        <div class="vtitle">${v[1]}</div>
+        <div class="vsub">${v[2]}</div>
+        <div class="vmeta"><span><b>${(conf.strong || []).length}</b> of ${total} answers flagged on both sides</span><span><b>${(conf.flagged || []).length}</b> flagged on one side or both</span><span><b>${esc(conf.eligible_answers)}</b> of ${total} long enough to judge</span></div>
+      </div>
+      <div class="scorecard">
+        <div class="k">Integrity score</div>
+        <div class="big">${score}<span class="of">/100</span></div>
+        <div class="meter"><i style="width:${score}%;background:var(--${v[0]})"></i><span class="thr" style="left:${THRESHOLD * 100}%" title="threshold ${THRESHOLD * 100}"></span></div>
+        <div class="b">threshold ${THRESHOLD * 100} · ${esc(conf.band)} confidence</div>
+      </div>
+    </div>
+    <div class="panel reasons">
+      <div class="k">Reasons</div>
+      ${reasons.length ? `<ul>${reasons.join('')}</ul>` : `<p class="empty">${total ? 'No answer has crossed a signal threshold.' : 'No answers analysed yet. Each one appears after Nia records it.'}</p>`}
+      ${call.restarts ? `<ul class="problems"><li><span class="sev medium">note</span><span>The agent session restarted ${esc(call.restarts)} time${call.restarts > 1 ? 's' : ''} during this call, so the candidate heard the greeting again. Timing signals near a restart are less reliable.</span></li></ul>` : ''}
+    </div>
+    <p class="small">An observation for a human, never an automatic rejection. Thresholds are not yet calibrated on real calls.</p>`;
+}
+
+function answerCard(x) {
+  const an = x.analysis;
+  let signals = '<div class="empty">Not analysed yet.</div>';
+  if (an) {
+    const [cls, lab] = badge(an.verdict);
+    const d = an.delivery, t = an.text || { words: 0, signals: [] };
+    const m = d ? `<span>onset <b>${esc(d.onset_ms ?? '?')} ms</b></span><span><b>${esc(d.main?.wpm ?? '?')}</b> wpm</span><span>fillers <b>${esc(d.main?.fillers_per100)}</b>/100</span><span>pauses <b>${esc(d.main?.pauses_per100)}</b>/100</span><span>restarts <b>${esc(d.main?.restarts_per100)}</b>/100</span>${d.follow_up ? `<span>follow-up disfluency <b>${esc(d.follow_up.disfluency_per100)}</b> vs <b>${esc(d.main?.disfluency_per100)}</b></span>` : ''}` : '<span>no word timings</span>';
+    signals = `<div class="metrics"><span class="badge ${cls}">${esc(lab)}</span><span>answer score <b>${Math.round((an.confidence || 0) * 100)}</b></span>${m}<span><b>${esc(t.words)}</b> words</span><span>text signals <b>${esc((t.signals || []).length)}</b>/6</span></div>
+      ${(an.evidence || []).length ? `<ul class="ev">${an.evidence.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : ''}`;
+  }
+  return `<div class="ans">
+    <div class="q"><span class="qid">${esc(x.question_id)}</span>${x.quality_hint ? `<span class="hint ${esc(x.quality_hint)}">${esc(x.quality_hint.replace('_', ' '))}</span>` : (x.recorded ? '' : '<span class="hint">not reached</span>')}</div>
+    <div class="qtext">${esc(x.question || 'Question text not saved')}</div>
+    ${x.summary ? `<p class="summary">${esc(x.summary)}</p>` : ''}
+    ${signals}
+  </div>`;
+}
+
+function transcriptView(lines) {
+  if (!lines.length) return '<p class="empty">Nothing said yet.</p>';
+  return `<div class="transcript">${lines.map(l => {
+    if (l.kind === 'turn') {
+      const who = l.role === 'agent' ? 'Nia' : l.role === 'candidate' ? 'Candidate' : l.role;
+      return `<div class="line ${esc(l.role)}"><div class="t">${esc(clock(l.at_s))}</div><div class="bubble"><div class="who">${esc(who)}${l.interrupted ? '<span class="cut">cut off</span>' : ''}</div>${esc(l.text)}</div></div>`;
+    }
+    const text = l.kind === 'answer' ? `${l.text} recorded` : l.text;
+    return `<div class="marker ${esc(l.kind)}">${esc(clock(l.at_s))} · ${esc(text)}</div>`;
+  }).join('')}</div>`;
+}
+
+function applicationView(c) {
+  const ans = c.answers || {};
+  const facts = [['Role', c.role], ['Company', c.company], ['Education', c.education], ['Years of experience', c.years_experience], ['Applied', when(c.created_at)]];
+  const qa = [['What do you do in your current job?', ans.current_job], ['Biggest project you have shipped?', ans.biggest_project], ['Why this role?', ans.why_this_role]];
+  return `<div class="panel">
+    <dl class="facts">${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v == null || v === '' ? '<span class="empty">not given</span>' : esc(v)}</dd>`).join('')}</dl>
+    <h2 style="margin-top:18px;font-size:15px">Their answers on the form</h2>
+    <dl class="facts">${qa.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v ? esc(v) : '<span class="empty">not given</span>'}</dd>`).join('')}</dl>
+    <h2 style="margin-top:18px;font-size:15px">Resume</h2>
+    <pre class="resume">${esc(c.resume_excerpt)}</pre>
+    <div class="small">Showing ${esc(Math.min(c.resume_chars, c.resume_excerpt.length))} of ${esc(c.resume_chars)} characters from ${esc(c.resume_filename)}</div>
+    <h2 style="margin-top:18px;font-size:15px">Interview questions</h2>
+    ${c.plan && c.plan.length ? `<ol class="plan">${c.plan.map(q => `<li>${esc(q.text)} <small>${esc(q.topic)}${q.grounded_in ? ' · from: ' + esc(q.grounded_in) : ''}</small></li>`).join('')}</ol>` : '<p class="empty">Nia prepares the questions from the resume when the candidate calls.</p>'}
+  </div>`;
+}
+
+function renderReport() {
+  const pane = $('pane-report');
+  const r = route();
+  const subject = r.id;
+  const calls = report.calls || [];
+  const sel = calls.find(c => c.id === pickedCall[subject]) || calls[0] || null;
+  const c = report.candidate;
+
+  let head;
+  if (c) {
+    head = `<div class="personhead"><div><h1>${esc(c.name)}</h1>
+      <div class="contact"><span>${esc(c.role)}${c.company ? ' at ' + esc(c.company) : ''}</span>${c.phone ? `<span>${esc(phone(c.phone))}</span>` : ''}${c.email ? `<span>${esc(c.email)}</span>` : ''}</div></div></div>`;
+  } else {
+    head = `<div class="personhead"><div><h1>Call with no application</h1>
+      <div class="contact"><span>${esc(sel?.caller_number ? phone(sel.caller_number) : 'Unknown caller')}</span><span>${esc(when(sel?.started_at))}</span></div></div></div>`;
+  }
+  let body = '';
+  if (!sel) {
+    body = `<div class="panel"><div class="k">No interview yet</div><p class="sub">${BOOT.agent_phone && c ? `Waiting for ${esc(c.name.split(' ')[0])} to call ${esc(phone(BOOT.agent_phone))} from ${esc(phone(c.phone))}. The call appears here live.` : 'The interview appears here live as soon as the candidate calls.'}</p></div>`;
+  } else {
+    const tabs = calls.length > 1 ? `<div class="calltabs" role="group" aria-label="Calls">${calls.map(x => `<button type="button" data-call="${esc(x.id)}" aria-pressed="${x.id === sel.id}">${esc(when(x.started_at))} · ${x.in_progress ? 'live' : esc(OUTCOME[x.outcome] || x.outcome)} · ${esc(x.score)}</button>`).join('')}</div>` : '';
+    const mech = (sel.analysis?.problems || []).filter(p => !(sel.answers || []).some(a => a.question_id === p.area));
+    body = `${tabs}${hero(sel)}
+      <h2>Interview answers</h2>
+      <div class="answers">${(sel.answers || []).map(answerCard).join('') || '<p class="empty">No questions on record.</p>'}</div>
+      ${mech.length ? `<h2>Call mechanics</h2><div class="panel"><ul class="problems">${mech.map(p => `<li><span class="sev ${esc(p.severity)}">${esc(p.severity)}</span><span><b>${esc(p.area)}</b>: ${esc(p.note)}</span></li>`).join('')}</ul></div>` : ''}
+      <h2>Transcript</h2>
+      <div class="panel">${transcriptView(sel.transcript || [])}</div>`;
+  }
+  const app = c ? `<h2>Application</h2>${applicationView(c)}` : '';
+
+  pane.innerHTML = `${head}${decisionBar(subject, report.decision)}${body}${app}`;
+  bindDecision();
+  pane.querySelectorAll('.calltabs button').forEach(b => b.addEventListener('click', () => { pickedCall[subject] = b.dataset.call; renderReport(); }));
+}
+
+function bindDecision() {
+  const d = $('decision');
+  if (!d) return;
+  const subject = d.dataset.subject, note = d.querySelector('input'), saved = d.querySelector('.saved');
+  const save = async v => {
+    const current = d.querySelector('[aria-pressed="true"]')?.dataset.v || null;
+    const body = { v: v === undefined ? current : (v === current ? null : v), note: note.value };
+    saved.className = 'saved'; saved.textContent = 'saving…';
+    try {
+      const r = await fetch(`/api/decisions/${encodeURIComponent(subject)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${(await r.json()).detail}`);
+      const rec = await r.json();
+      d.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === rec.v)));
+      saved.textContent = 'saved ' + when(rec.at);
+      if (report) report.decision = rec;
+      await refreshRoster();
+    } catch (err) {
+      saved.className = 'saved err'; saved.textContent = 'not saved: ' + err.message;
+    }
+  };
+  d.querySelectorAll('button').forEach(b => b.addEventListener('click', () => save(b.dataset.v)));
+  note.addEventListener('change', () => save(undefined));
+}
+
+// ---------- panes ----------
+async function show() {
+  const r = route();
+  $('pane-new').hidden = r.kind !== 'new';
+  $('pane-empty').hidden = r.kind !== 'none';
+  $('pane-report').hidden = !(r.kind === 'candidate' || r.kind === 'call');
+  if (roster) renderSidebar();
+  if (r.kind === 'candidate' || r.kind === 'call') {
+    const url = r.kind === 'candidate' ? `/api/candidates/${encodeURIComponent(r.id)}` : `/api/calls/${encodeURIComponent(r.id)}`;
+    try {
+      report = await getJSON(url);
+      reportSig = roster ? sigOf(rosterEntry(r)) : '';
+      renderReport();
+    } catch (err) {
+      report = null;
+      $('pane-report').innerHTML = `<div class="errors" role="alert"><b>Could not load this ${r.kind === 'call' ? 'call' : 'applicant'}.</b><ul><li>${esc(err.message)}</li></ul></div>`;
+    }
+  } else {
+    report = null;
+  }
+}
+
+async function refreshRoster() {
+  roster = await getJSON('/api/roster');
+  renderSidebar();
+}
+
+async function tick() {
+  try {
+    await refreshRoster();
+    const r = route();
+    // Never re-render under a recruiter who is typing a decision note.
+    const typing = document.activeElement && document.activeElement.closest('#decision');
+    if ((r.kind === 'candidate' || r.kind === 'call') && report && !typing) {
+      const live = (report.calls || []).some(c => c.in_progress);
+      if (live || sigOf(rosterEntry(r)) !== reportSig) await show();
+    }
+  } catch (err) {
+    $('updated').innerHTML = `<span class="live">update failed</span> ${esc(err.message)}`;
+  }
+}
+
+// ---------- how the score works (loaded on first open) ----------
+const pct = x => x == null ? 'n/a' : Math.round(x * 100) + '%';
+$('method').addEventListener('toggle', async e => {
+  if (!e.target.open || e.target.dataset.loaded) return;
+  e.target.dataset.loaded = '1';
+  const body = $('method-body');
+  try {
+    const D = await getJSON('/api/detectors');
+    const both = D.detectors.find(d => d.name === 'Both sides agree');
+    const coin = D.detectors.find(d => d.name === 'Coin flip');
+    const para = D.tiers.find(t => t.tier === 'ai_paraphrased');
+    const prep = D.tiers.find(t => t.tier === 'human_prepared');
+    const tiles = [
+      ['Catch rate (both sides agree)', pct(both?.catch), `coin flip: ${pct(coin?.catch)}`],
+      ['False-flag rate (both sides agree)', pct(both?.false_flag), `coin flip: ${pct(coin?.false_flag)}`],
+      ['Paraphrased AI answers caught', para ? `${para.both}/${para.n}` : 'n/a', "generated text re-spoken in the candidate's words"],
+      ['Prepared honest stories flagged', prep ? `${prep.both}/${prep.n}` : 'n/a', 'rehearsed true story, fluent and structured'],
+    ];
+    const tierCols = Object.keys(D.tiers[0] || {});
+    body.innerHTML = `
+      <p class="sub">Measured on ${esc(D.n_fixtures)} labelled answers, beside do-nothing baselines. This is the evidence behind every score above.</p>
+      <div class="tiles">${tiles.map(([k, v, b]) => `<div class="tile"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="b">${esc(b)}</div></div>`).join('')}</div>
+      <h2>Catch rate vs false-flag rate, per detector</h2>
+      <div class="panel">
+        <div class="legend"><span><i style="background:var(--s1)"></i>Catch rate on AI-written answers</span><span><i style="background:var(--s2)"></i>False-flag rate on human answers</span></div>
+        <div class="bars">${D.detectors.map(d => `<div class="barrow"><div>${esc(d.name)}</div><div class="barpair">
+          <div class="bar catch" style="width:${Math.round((d.catch || 0) * 100)}%" title="catch ${pct(d.catch)}"></div>
+          <div class="bar ff" style="width:${Math.round((d.false_flag || 0) * 100)}%" title="false flag ${pct(d.false_flag)}"></div></div></div>`).join('')}</div>
+      </div>
+      <h2>By answer type</h2>
+      <div class="panel tbl"><table><thead><tr>${tierCols.map(k => `<th class="${k === 'tier' ? '' : 'n'}">${esc(k.replace(/_/g, ' '))}</th>`).join('')}</tr></thead>
+        <tbody>${D.tiers.map(t => `<tr>${tierCols.map(k => `<td class="${k === 'tier' ? '' : 'n'}">${esc(t[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <div class="methodgrid">
+        <div class="panel"><b>Voice: did it sound read?</b><p>Onset delay after the question, words per minute, fillers and mid-sentence pauses per 100 words, restarts, and the fluency drop when Nia asks an unscripted follow-up. Three or more signals on an answer of 40+ words means "sounds read".</p></div>
+        <div class="panel"><b>Text: does it read as generated?</b><p>No disfluencies, enumerating markers, no concrete details, long uniform sentences, formal register, stock competency phrases. Three or more on 25+ words means "reads generated".</p></div>
+        <div class="panel"><b>Combined score</b><p>Either side alone is a note. Both together is "AI-assisted". The 0 to 100 score comes from the two strongest answers, discounted when fewer than three answers were long enough. Under 35 no indication, 35 to 59 possible, 60 and above likely.</p></div>
+        <div class="panel"><b>What it cannot claim</b><p>Fluent speakers, prepared honest stories, non-native speakers and anxious candidates can all look like readers. That is why it is an observation for a human, with the numbers behind it, and never an automatic rejection.</p></div>
+      </div>`;
+  } catch (err) {
+    delete e.target.dataset.loaded;
+    body.innerHTML = `<div class="errors" role="alert"><b>Could not load the detector results.</b><ul><li>${esc(err.message)}</li></ul></div>`;
+  }
+});
+
+// ---------- start ----------
+// After a rejected POST /apply the address bar says /apply; point it back at the page.
+if (BOOT.has_errors) history.replaceState(null, '', '/#new');
+window.addEventListener('hashchange', () => { show(); });
+(async () => {
+  try { await refreshRoster(); } catch (err) { $('updated').innerHTML = `<span class="live">could not load applicants</span> ${esc(err.message)}`; }
+  await show();
+  setInterval(tick, POLL_MS);
+})();
+</script>
+{% endraw %}
+</body>
+</html>
