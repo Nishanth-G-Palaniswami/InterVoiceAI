@@ -109,20 +109,30 @@ section.part > h2{display:flex;align-items:baseline;justify-content:space-betwee
 section.part > h2 .aside{text-transform:none;letter-spacing:0;font-weight:400;font-size:13px}
 
 /* ---------- finding + ruling (the focal band) ---------- */
-.finding{margin-top:22px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px 28px;align-items:center;padding:20px 22px;background:var(--paper-raised);border-radius:12px;box-shadow:var(--lift);border-left:4px solid var(--rule-strong)}
-.finding.good{border-left-color:var(--ledger)}.finding.warn{border-left-color:var(--amber)}.finding.crit{border-left-color:var(--onair)}
+.finding{margin-top:22px;padding:18px 22px 20px;background:var(--paper-raised);border-radius:12px;box-shadow:var(--lift)}
+.readings{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:12px}
+.reading{padding:14px 22px 4px 0;border-top:3px solid var(--rule-strong);min-width:0}
+.reading + .reading{padding-left:22px;padding-right:0;border-left:1px solid var(--rule)}
+.reading.good{border-top-color:var(--ledger)}.reading.warn{border-top-color:var(--amber)}.reading.crit{border-top-color:var(--onair)}
+.reading .head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.reading .head .fig{font-family:var(--mono);font-size:30px;font-weight:500;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.reading .head .fig .of{font-size:14px;color:var(--pencil);margin-left:2px}
+.pips{display:flex;gap:3px;margin:8px 0 2px}
+.pips i{width:22px;height:5px;border-radius:2px;background:var(--paper-inset);box-shadow:inset 0 0 0 1px var(--rule-soft)}
+.pips i.on{background:currentColor;box-shadow:none}
+.pips i.half{background:linear-gradient(90deg,currentColor 50%,var(--paper-inset) 50%)}
+.rationale{font-family:var(--serif);font-size:17px;line-height:1.5;color:var(--ink);margin:8px 0 0;max-width:62ch}
+.pc{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;margin-top:12px;font-size:14px}
+.pc b{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--pencil)}
+.pc ul{margin:4px 0 0;padding-left:16px;color:var(--graphite);display:grid;gap:4px}
 .finding .when{font-size:13px;color:var(--pencil);display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center}
 .finding .verdict{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-size:24px;font-weight:600;letter-spacing:-.01em;line-height:1.2;margin:6px 0 4px}
 .finding .verdict .icon{width:22px;height:22px}
 .finding .why{color:var(--graphite);max-width:62ch;margin:0}
-.figure{text-align:right}
-.figure .big{font-family:var(--mono);font-size:44px;font-weight:500;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.figure .of{font-size:15px;color:var(--pencil);margin-left:2px}
-.gauge{position:relative;width:148px;height:6px;border-radius:3px;background:var(--paper-inset);margin:10px 0 6px auto;box-shadow:inset 0 0 0 1px var(--rule-soft)}
+.gauge{position:relative;width:100%;height:6px;border-radius:3px;background:var(--paper-inset);margin:8px 0 4px;box-shadow:inset 0 0 0 1px var(--rule-soft)}
 .gauge i{position:absolute;inset:0 auto 0 0;border-radius:3px}
 .gauge .thr{position:absolute;top:-4px;width:2px;height:14px;background:var(--ink);opacity:.55}
-.figure .cap{font-size:12px;color:var(--pencil)}
-.ruling-bar{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:16px;border-top:1px solid var(--rule)}
+.ruling-bar{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:16px;border-top:1px solid var(--rule)}
 .ruling-bar .lbl{font-weight:600;margin-right:6px}
 .seg{display:inline-flex;border-radius:8px;box-shadow:0 0 0 1px var(--rule-strong);overflow:hidden}
 .seg button{min-height:44px;min-width:92px;padding:0 14px;border:0;background:var(--paper-raised);cursor:pointer;font-weight:500;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background-color .15s var(--ease-out)}
@@ -175,6 +185,12 @@ section.part > h2 .aside{text-transform:none;letter-spacing:0;font-weight:400;fo
 .tag.good{background:var(--ledger-wash);color:var(--ledger);box-shadow:none}
 .tag.warn{background:var(--amber-wash);color:var(--amber);box-shadow:none}
 .tag.crit{background:var(--onair-wash);color:var(--onair);box-shadow:none}
+.assess{margin-top:10px;padding:10px 14px;border-radius:8px;background:var(--paper-inset);box-shadow:inset 0 0 0 1px var(--rule-soft);font-size:14px;color:var(--graphite);max-width:68ch}
+.assess .top{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.assess .top .num{font-weight:500;color:var(--ink)}
+.assess .top .num.band-good{color:var(--ledger)}.assess .top .num.band-crit{color:var(--onair)}
+.assess blockquote{margin:8px 0 0;padding-left:12px;border-left:2px solid var(--rule-strong);font-family:var(--serif);font-size:16px;font-style:italic;color:var(--ink)}
+.assess .unverified{display:block;font-family:var(--sans);font-style:normal;font-size:12px;color:var(--amber);margin-top:2px}
 .jump{border:0;background:none;color:var(--ink-blue);cursor:pointer;font-size:13px;padding:6px 0;min-height:32px;text-decoration:underline;text-underline-offset:2px}
 details.signals{margin-top:6px}
 details.signals summary{cursor:pointer;font-size:13px;color:var(--graphite);min-height:32px;display:inline-flex;align-items:center;gap:6px}
@@ -276,8 +292,10 @@ td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-
   .rows{flex-direction:row;overflow-x:auto;gap:8px;padding:0 16px 4px;scroll-snap-type:x proximity}
   .row{flex:0 0 232px;border:1px solid var(--rule);border-radius:10px;scroll-snap-align:start}
   .row[aria-current="page"]{border-color:var(--ink);border-left-width:1px}
-  .finding{grid-template-columns:1fr}
-  .figure{text-align:left}.gauge{margin-left:0}
+  .readings{grid-template-columns:1fr}
+  .reading + .reading{padding-left:0;border-left:0;margin-top:14px}
+  .pc{grid-template-columns:1fr}
+  .gauge{margin-left:0}
   fieldset{grid-template-columns:1fr}
   dl.file{grid-template-columns:1fr;gap:2px}
   dl.file dd{margin-bottom:10px}
@@ -490,7 +508,34 @@ function questionOfLine(lines) {
   return owner;
 }
 
-function finding(call, subject, decision) {
+const RECOMMENDATION = { advance: ['good', 'check', 'Advance'], follow_up: ['warn', 'warn', 'Follow up'], do_not_advance: ['crit', 'crit', 'Do not advance'] };
+const qkey = id => /^\d+$/.test(String(id)) ? 'q' + id : String(id);
+const scoreBand = n => n == null ? '' : n >= 4 ? 'good' : n >= 3 ? '' : 'crit';
+
+function substance(call) {
+  // Nia's post-call assessment (src/assessment.py): what the candidate said.
+  const a = call.assessment;
+  const label = '<div class="small-caps">What they said · Nia&#39;s assessment</div>';
+  if (!a) return `<section class="reading" aria-label="Assessment"><div class="head">${label}</div>
+      <h2 class="verdict">${icon('dash')}<span>Not assessed yet</span></h2>
+      <p class="why">${call.in_progress ? 'Nia writes the assessment right after the call ends.' : 'No assessment was written for this call.'}</p></section>`;
+  if (a.status !== 'ok') return `<section class="reading warn" aria-label="Assessment"><div class="head">${label}</div>
+      <h2 class="verdict band-warn">${icon('warn')}<span style="color:var(--ink)">Assessment ${esc(a.status)}</span></h2>
+      <p class="why">${esc(a.error || a.reason || 'No detail recorded.')}</p></section>`;
+  const [cls, ic, lab] = RECOMMENDATION[a.recommendation] || ['', 'dash', a.recommendation];
+  const overall = a.overall == null ? null : Number(a.overall);
+  const pips = overall == null ? '' : `<div class="pips band-${cls}" aria-hidden="true">${[1, 2, 3, 4, 5].map(n => `<i class="${n <= overall ? 'on' : n - 0.5 <= overall ? 'half' : ''}"></i>`).join('')}</div>`;
+  const list = (items, title) => items && items.length ? `<div><b>${esc(title)}</b><ul>${items.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
+  return `<section class="reading ${cls}" aria-label="Assessment">
+      <div class="head">${label}<span class="fig band-${cls}" aria-label="Overall ${overall ?? 'unknown'} out of 5">${overall == null ? '–' : esc(overall)}<span class="of">/5</span></span></div>
+      <h2 class="verdict band-${cls}">${icon(ic)}<span style="color:var(--ink)">${esc(lab)}</span></h2>${pips}
+      ${a.rationale ? `<p class="rationale">${esc(a.rationale)}</p>` : ''}
+      ${(a.strengths || []).length || (a.concerns || []).length ? `<div class="pc">${list(a.strengths, 'Strengths')}${list(a.concerns, 'Concerns')}</div>` : ''}
+    </section>`;
+}
+
+function integrity(call) {
+  // The post-interview lane's read: how the answers were delivered.
   const a = call.analysis || {};
   const conf = a.confidence || { score: 0, band: 'low', eligible_answers: 0, strong: [], flagged: [] };
   const score = Math.round((conf.score || 0) * 100);
@@ -500,14 +545,13 @@ function finding(call, subject, decision) {
   const none = !conf.eligible_answers;
   const band = none ? 'none' : conf.score >= THRESHOLD ? 'crit' : conf.band === 'medium' ? 'warn' : 'good';
   const title = { crit: 'Likely AI-assisted', warn: 'Possible AI assistance', good: 'No indication of AI assistance', none: 'Nothing to judge yet' }[band];
-  const why = { crit: 'Text and voice signals agree on at least one answer. Read the flagged answers before deciding.',
-                warn: 'One side flagged, or the agreement is weak. Worth a look at the flagged answers.',
-                good: 'Below the threshold on every answer analysed so far.',
-                none: answers.length ? 'No answer so far was long enough to judge. Short replies carry too few signals to score.' : 'The integrity read appears once Nia records the first answer.' }[band];
-  const flaggedCount = (a.answers || []).filter(x => FLAGGED.has(x.verdict)).length;
-  const whyText = band === 'good' && flaggedCount
+  const flaggedCount = answers.filter(x => FLAGGED.has(x.verdict)).length;
+  const why = band === 'good' && flaggedCount
     ? `Below the threshold overall, but ${plural(flaggedCount, 'answer was', 'answers were')} flagged on one side. Worth reading before deciding.`
-    : why;
+    : { crit: 'Text and voice signals agree on at least one answer. Read the flagged answers before deciding.',
+        warn: 'One side flagged, or the agreement is weak. Worth a look at the flagged answers.',
+        good: `Below the threshold on every answer. ${esc(conf.eligible_answers)} of ${plural(answers.length, 'answer')} long enough to judge.`,
+        none: answers.length ? 'No answer so far was long enough to judge. Short replies carry too few signals to score.' : 'The integrity read appears once Nia records the first answer.' }[band];
   const reasons = answers.filter(x => FLAGGED.has(x.verdict)).map(x => {
     const [cls, ic, label] = VERDICT[x.verdict];
     return `<li><span class="band-${cls}">${icon(ic)}</span><span><b>${esc(x.question_id)}</b> ${esc(label)}, answer score <span class="num">${Math.round((x.confidence || 0) * 100)}</span>. ${esc((x.evidence || []).slice(0, 3).join('; '))}</span></li>`;
@@ -515,22 +559,23 @@ function finding(call, subject, decision) {
   (a.problems || []).filter(p => p.severity === 'high' && !answers.some(x => x.question_id === p.area))
     .forEach(p => reasons.push(`<li><span class="band-crit">${icon('crit')}</span><span><b>${esc(p.area)}</b> ${esc(p.note)}</span></li>`));
   if (call.restarts) reasons.push(`<li><span class="band-warn">${icon('warn')}</span><span>The agent restarted ${plural(call.restarts, 'time')} during this call and greeted the candidate again. Timing signals near a restart are less reliable.</span></li>`);
+  const meter = band === 'crit' ? 'onair' : band === 'warn' ? 'amber' : 'ledger';
+  return `<section class="reading ${band}" aria-label="Integrity">
+      <div class="head"><div class="small-caps">How they said it · integrity</div><span class="fig band-${band}" aria-label="Integrity score ${none ? 'not available' : score + ' out of 100'}">${none ? '–' : score}<span class="of">/100</span></span></div>
+      <h2 class="verdict band-${band}">${icon(none ? 'dash' : BAND[band][0])}<span style="color:var(--ink)">${title}</span></h2>
+      <div class="gauge" style="margin:8px 0 4px" aria-hidden="true"><i style="width:${none ? 0 : score}%;background:var(--${meter})"></i><span class="thr" style="left:${THRESHOLD * 100}%"></span></div>
+      <p class="why">${why}</p>
+      ${reasons.length ? `<ul class="reasons">${reasons.join('')}</ul>` : ''}
+    </section>`;
+}
+
+function finding(call, subject, decision) {
   const on = v => String(!!decision && decision.v === v);
   const state = call.in_progress ? '<span class="onair">Live now</span>' : esc(OUTCOME[call.outcome] || call.outcome);
   return `
-    <div class="finding ${band}">
-      <div>
-        <div class="when">${state}<span>${icon('clock')} ${esc(when(call.started_at))}${call.duration_s != null ? ` · <span class="num">${esc(clock(call.duration_s))}</span>` : ''}</span>${!answers.length ? '' : `<span><span class="num">${esc(conf.eligible_answers)}</span> of ${plural(answers.length, 'answer')} long enough to judge</span>`}</div>
-        <h2 class="verdict band-${band}">${icon(none ? 'dash' : BAND[band][0])}<span style="color:var(--ink)">${title}</span></h2>
-        <p class="why">${whyText}</p>
-        ${reasons.length ? `<ul class="reasons">${reasons.join('')}</ul>` : ''}
-      </div>
-      <div class="figure" aria-label="Integrity score ${score} out of 100, threshold ${THRESHOLD * 100}">
-        <div class="small-caps">Integrity score</div>
-        <div class="big band-${band}">${none ? '–' : score}<span class="of">/100</span></div>
-        <div class="gauge"><i style="width:${score}%;background:var(--${band === 'crit' ? 'onair' : band === 'warn' ? 'amber' : 'ledger'})"></i><span class="thr" style="left:${THRESHOLD * 100}%"></span></div>
-        <div class="cap">threshold <span class="num">${THRESHOLD * 100}</span> · ${esc(conf.band)} confidence</div>
-      </div>
+    <div class="finding">
+      <div class="when">${state}<span>${icon('clock')} ${esc(when(call.started_at))}${call.duration_s != null ? ` · <span class="num">${esc(clock(call.duration_s))}</span>` : ''}</span></div>
+      <div class="readings">${substance(call)}${integrity(call)}</div>
       <div class="ruling-bar" id="decision" data-subject="${esc(subject)}">
         <span class="lbl">Your decision</span>
         <span class="seg" role="group" aria-label="Your decision">
@@ -542,7 +587,7 @@ function finding(call, subject, decision) {
         <span class="saved" aria-live="polite">${decision ? 'Saved ' + esc(when(decision.at)) : 'Not decided'}</span>
       </div>
     </div>
-    <p class="caveat">An observation for a person to weigh, never an automatic rejection. Thresholds are not yet calibrated on real calls.</p>`;
+    <p class="caveat">Both readings are written by AI for a person to weigh, never an automatic decision. The integrity thresholds are not yet calibrated on real calls.</p>`;
 }
 
 function tape(call, owner, flagged) {
@@ -570,7 +615,7 @@ function tape(call, owner, flagged) {
     <div class="tapekey"><span><i style="background:var(--rule-strong)"></i>Nia</span><span><i style="background:var(--ink-blue)"></i>Candidate</span><span><i style="background:var(--amber)"></i>Flagged answer</span><span>Click the tape to jump to that moment</span></div>`;
 }
 
-function answerEntry(x, firstLine) {
+function answerEntry(x, firstLine, aq) {
   const an = x.analysis;
   const hint = x.quality_hint ? `<span class="tag ${x.quality_hint === 'adequate' ? 'good' : x.quality_hint === 'thin' ? 'warn' : 'crit'}">${esc(x.quality_hint.replace('_', ' '))}</span>` : '';
   let signal = '', details = '';
@@ -589,6 +634,8 @@ function answerEntry(x, firstLine) {
       <p class="q">${esc(x.question || 'Question text not saved')}</p>
       ${x.summary ? `<p class="said">${esc(x.summary)}</p>` : `<p class="notyet">${x.recorded ? 'Recorded without a summary.' : 'Not reached on this call.'}</p>`}
       <div class="tags">${hint}${signal}${jump}</div>
+      ${aq ? `<div class="assess"><div class="top"><span class="small-caps">Assessment</span>${aq.score == null ? '<span>Not answered</span>' : `<span class="num band-${scoreBand(aq.score)}">${esc(aq.score)}/5</span>`}${aq.note ? `<span>${esc(aq.note)}</span>` : ''}</div>
+        ${aq.evidence ? `<blockquote>“${esc(aq.evidence)}”${aq.evidence_verified ? '' : '<span class="unverified">Not found word for word in the transcript</span>'}</blockquote>` : ''}</div>` : ''}
       ${details}
     </div>
   </article>`;
@@ -640,7 +687,8 @@ function renderReport() {
     const owner = questionOfLine(sel.transcript || []);
     const firstLineOf = {};
     owner.forEach((q, i) => { if (q && firstLineOf[q] == null) firstLineOf[q] = i; });
-    const answers = (sel.answers || []).map(x => answerEntry(x, firstLineOf[x.question_id])).join('');
+    const aqs = Object.fromEntries(((sel.assessment && sel.assessment.status === 'ok' && sel.assessment.questions) || []).map(q => [qkey(q.id), q]));
+    const answers = (sel.answers || []).map(x => answerEntry(x, firstLineOf[x.question_id], aqs[x.question_id])).join('');
     const mech = (sel.analysis?.problems || []).filter(p => !(sel.answers || []).some(a => a.question_id === p.area));
     const switcher = calls.length > 1 ? `<div class="calls" role="group" aria-label="Calls">${calls.map(x => `<button type="button" data-call="${esc(x.id)}" aria-pressed="${x.id === sel.id}">${esc(when(x.started_at))} · ${x.in_progress ? 'Live' : esc(OUTCOME[x.outcome] || x.outcome)} ${scoreMark(x)}</button>`).join('')}</div>` : '';
     const recorded = (sel.answers || []).filter(x => x.recorded).length;
