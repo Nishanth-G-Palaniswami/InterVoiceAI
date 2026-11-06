@@ -169,7 +169,7 @@ def observe(question_id: str, answer_text: str, delivery: AnswerDelivery | None)
         verdict = "sounds_read"
     else:
         verdict = "none"
-    evidence = [f"text: {s}" for s in ts.signals] + ([f"voice: {s}" for s in delivery.signals] if delivery else [])
+    evidence = [f"text: {s}" for s in ts.signals] + ([f"voice: {s}" for s in delivery.signals] if (delivery and delivery.eligible) else [])
     return Observation(question_id=question_id, text=ts, delivery=delivery, verdict=verdict, evidence=evidence)
 
 
@@ -184,7 +184,7 @@ def answer_texts(events: list[dict[str, Any]]) -> dict[str, str]:
         typ = ev.get("type")
         if typ == "turn" and p.get("role") == "agent":
             if is_question(str(p.get("text") or "")):
-                questions_asked += 1
+                questions_asked = (max(questions_asked, 1) + 1) if buf else 1
         elif typ == "turn" and p.get("role") == "candidate":
             if questions_asked <= 1:
                 buf.append(str(p.get("text") or ""))

@@ -119,6 +119,8 @@ def judge(m: Features, f: Features | None) -> tuple[list[str], bool, bool]:
     """(signals, sounds_read, eligible)."""
     T = THRESHOLDS
     signals: list[str] = []
+    if m.words == 0:
+        return signals, False, False
     if m.fillers_per100 < T["max_fillers_per100"]:
         signals.append("almost no fillers")
     if m.pauses_per100 < T["max_pauses_per100"]:
@@ -155,8 +157,13 @@ def answer_delivery(events: list[dict[str, Any]]) -> list[AnswerDelivery]:
         typ = ev.get("type")
         if typ == "turn" and p.get("role") == "agent":
             if is_question(str(p.get("text") or "")):
-                questions_asked += 1
-                asked_at = p["ended_at"] if isinstance(p.get("ended_at"), (int, float)) else None
+                # Before the candidate has spoken, every agent prompt is (still) the main question, so a transition
+                # sentence or a re-ask does not push the real answer into the follow-up bucket.
+                if main:
+                    questions_asked = max(questions_asked, 1) + 1
+                else:
+                    questions_asked = 1
+                    asked_at = p["ended_at"] if isinstance(p.get("ended_at"), (int, float)) else None
         elif typ == "turn" and p.get("role") == "candidate":
             t = CandTurn(
                 turn_id=str(p.get("turn_id")),

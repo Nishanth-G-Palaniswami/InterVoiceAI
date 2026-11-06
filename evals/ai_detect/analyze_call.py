@@ -60,17 +60,20 @@ def follow_up_texts(events: list[dict]) -> dict[str, str]:
     out: dict[str, str] = {}
     buf: list[str] = []
     asked = 0
+    spoke = False
     for ev in sorted(events, key=lambda e: e.get("seq") or 0):
         p = ev.get("payload") or {}
         t = ev.get("type")
         if t == "turn" and p.get("role") == "agent" and is_question(str(p.get("text") or "")):
-            asked += 1
-        elif t == "turn" and p.get("role") == "candidate" and asked >= 2:
-            buf.append(str(p.get("text") or ""))
+            asked = (max(asked, 1) + 1) if spoke else 1
+        elif t == "turn" and p.get("role") == "candidate":
+            spoke = True
+            if asked >= 2:
+                buf.append(str(p.get("text") or ""))
         elif t in ("tool_mark_knockout", "tool_record_answer"):
             if t == "tool_record_answer":
                 out[str(p.get("question_id") or "?")] = " ".join(buf).strip()
-            buf, asked = [], 0
+            buf, asked, spoke = [], 0, False
     return out
 
 
