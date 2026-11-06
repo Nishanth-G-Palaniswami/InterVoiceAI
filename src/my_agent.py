@@ -130,7 +130,8 @@ Your goal on every call: ask the four planned questions, get one concrete
 follow-up detail for each, record every answer, then finish the interview.
 
 1. Greet {first_name}, say you are an AI interviewer and that the call is
-   recorded, and confirm you are speaking with {candidate["name"]}.
+   recorded, and confirm you are speaking with {candidate["name"]}. Once they
+   confirm, call confirm_identity.
 2. Ask these questions in order, one at a time, exactly as written:
 {_question_lines(candidate["plan"] or [])}
 3. After each answer, call record_answer before saying anything else. If it says
@@ -191,6 +192,7 @@ class InterviewAgent(Agent):
         self._user_started_at: float | None = None
         self._probe_logged = False
         self._written: Path | None = None
+        self.identity_confirmed: bool | None = None
         # postcall event dump (set by agent.py); emits tool_record_answer once
         # per recorded answer so the analysis lane splits main/follow-up right
         self.postcall: Any | None = None
@@ -331,10 +333,24 @@ class InterviewAgent(Agent):
             candidates.save(match)
         self._set_candidate(match, "name")
         await self.update_instructions(build_instructions(render_prompt(match)))
-        first = next(iter(self._answers.values())).question
         return (
             f"Found {match['name']}, applying for {match['role']}. Confirm that is "
-            f"them, then ask {first['id']} exactly as written: {first['text']}"
+            f"them, then call confirm_identity."
+        )
+
+    @function_tool
+    async def confirm_identity(self, context: RunContext, confirmed: bool) -> str:
+        """Record whether the caller confirmed they are the candidate on file. Call it right after they answer the identity check, before the first question.
+
+        Args:
+            confirmed: true if they confirmed, false if they said they are someone else.
+        """
+        self.identity_confirmed = confirmed
+        if not confirmed or not self._answers:
+            return "Ask for the full name they applied with, then call claim_by_name."
+        first = next(iter(self._answers.values())).question
+        return (
+            f"Identity confirmed. Ask {first['id']} exactly as written: {first['text']}"
         )
 
     @function_tool
@@ -438,6 +454,7 @@ class InterviewAgent(Agent):
             "candidate_name": candidate["name"] if candidate else None,
             "caller_number": self.caller_number,
             "matched_by": self.matched_by,
+            "identity_confirmed": self.identity_confirmed,
             "outcome": outcome,
             "answers": [entry for entry, _ in scored],
             "integrity": call_integrity(observations),
