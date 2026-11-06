@@ -157,7 +157,8 @@ Rules:
 - Fair hiring: never ask about or comment on age, race, religion, disability,
   pregnancy, family plans, nationality or immigration status. If the candidate
   raises one, do not record it and move on.
-- If the candidate wants to stop, call finish_interview, then end the call.
+- If the candidate wants to stop, call finish_interview with
+  candidate_wants_to_stop set to true, then end the call.
 """
 
 
@@ -376,10 +377,32 @@ class InterviewAgent(Agent):
         )
 
     @function_tool
-    async def finish_interview(self, context: RunContext) -> str:
-        """Save the interview. Call it once every planned question is recorded, or when the candidate asks to stop, before you say goodbye."""
-        done = all(a.recorded for a in self._answers.values())
-        self.write_call("completed" if done else "stopped")
+    async def finish_interview(
+        self, context: RunContext, candidate_wants_to_stop: bool
+    ) -> str:
+        """Save the interview and move to the goodbye. Call it on its own, after the last record_answer result has come back, never in the same turn as record_answer.
+
+        Args:
+            candidate_wants_to_stop: true only if the candidate asked to stop or leave before every question was recorded.
+        """
+        return self.finish(candidate_wants_to_stop)
+
+    def finish(self, candidate_wants_to_stop: bool) -> str:
+        pending = [a for a in self._answers.values() if not a.recorded]
+        if pending and not candidate_wants_to_stop:
+            first = pending[0]
+            step = (
+                "ask its follow-up, then call record_answer again"
+                if first.follow_up_requested
+                else "ask it, then call record_answer"
+            )
+            return (
+                f"Not finished: {first.question['id']} is not recorded yet. "
+                f"{step[0].upper()}{step[1:]}: {first.question['text']} "
+                "Call finish_interview with candidate_wants_to_stop=true only if "
+                "the candidate asked to stop."
+            )
+        self.write_call("completed" if not pending else "stopped")
         return (
             "Saved. Thank the candidate, say the recruiting team will follow up "
             "within two days, then end the call."
