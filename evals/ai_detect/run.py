@@ -179,8 +179,12 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--timings", choices=["synthetic", "none", "real"], default="synthetic")
     ap.add_argument("--json", type=pathlib.Path)
+    ap.add_argument("--text-min-signals", type=int, help="override ai_text THRESHOLDS['min_signals'] for a sweep")
     ap.add_argument("--out", type=pathlib.Path, default=HERE / "report.md")
     args = ap.parse_args()
+    if args.text_min_signals:
+        from interviewer import ai_text
+        ai_text.THRESHOLDS["min_signals"] = args.text_min_signals
     rows = evaluate(load_fixtures(), args.timings)
     text = report(rows, args.timings)
     print(text)

@@ -65,6 +65,24 @@ Reading: verbatim readers are caught (5 of 6); paraphrasers are missed (0 of 6),
 the thing real calls must test; prepared honest stories trip the voice side (6 of 6 on synthetic timings), which is
 why voice alone is never a verdict. Human fixtures and timings are synthetic until real calls replace them.
 
+## Public-data stress test (AMI humans + matched Gemini pairs, 2026-11-06 17:40, text signals only)
+
+60 answers: 18 real spontaneous passages (AMI Meeting Corpus, CC BY 4.0), 6 synthetic prepared humans, 18 Gemini
+polished answers and 18 Gemini spoken-style rewrites, each generated from an AMI passage at the same length.
+
+| Text threshold (signals required) | Catch on AI (verbatim / paraphrased) | False flags on humans (AMI real / prepared) |
+|---|---|---|
+| 2 of 6 | 64% (17/18 / 6/18) | 12% (1/18 / 2/6) |
+| **3 of 6 (shipped)** | 33% (12/18 / 0/18) | 4% (1/18 / 0/6) |
+| 4 of 6 | 8% (3/18 / 0/18) | 0% |
+| coin flip | 36% | 54% |
+
+Reading: on real speech the text side separates polished generated answers from spontaneous humans at a 4% false-flag
+cost; paraphrased generated speech is invisible to text signals at the shipped threshold, and only the unscripted
+follow-up on a live call can catch it. Voice-side numbers need real word timings from our own calls.
+Decision for Alex: keep 3 (fewer false flags, "evidence for a recruiter") or move to 2 (catches more, and 2 of 6
+synthetic prepared humans get flagged). Sweep: `uv run python evals/ai_detect/run.py --timings none --text-min-signals N`.
+
 ## Timeline to 7:00
 
 | Time | Step | Done when |
