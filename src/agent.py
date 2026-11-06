@@ -183,11 +183,13 @@ async def entrypoint(ctx: JobContext) -> None:
     if isinstance(agent, InterviewAgent):
         interview = agent
 
-        async def save_partial_call() -> None:
-            # A hang-up before finish_interview still leaves a record.
+        async def finish_record() -> None:
+            # A hang-up before finish_interview still leaves a record; then the
+            # post-call assessment is added, after the caller is gone.
             interview.write_call("dropped")
+            await interview.assess()
 
-        ctx.add_shutdown_callback(save_partial_call)
+        ctx.add_shutdown_callback(finish_record)
         # Live event dump (calls/<room>.events.jsonl) for the post-interview
         # analysis lane and its dashboard. record_answer runs twice per question
         # (the first call is the follow-up gate), so the agent emits the
