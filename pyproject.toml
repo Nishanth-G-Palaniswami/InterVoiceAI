@@ -39,6 +39,9 @@ asyncio_default_fixture_loop_scope = "function"
 [tool.ruff]
 line-length = 88
 target-version = "py39"
+# Vendored from the post-interview lane (teammate-owned): never reformatted or linted here,
+# so the files stay byte-identical to that branch.
+extend-exclude = ["src/interviewer", "src/postcall.py", "evals/ai_detect", "tests/test_delivery_port.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "B", "A", "C4", "UP", "SIM", "RUF"]
@@ -48,6 +51,3 @@ ignore = ["E501"]  # Line too long (handled by formatter)
 quote-style = "double"
 indent-style = "space"
 
-[tool.ruff.lint.per-file-ignores]
-# Vendored from the post-interview lane (teammate-owned); kept identical to that branch.
-"src/interviewer/*" = ["N802", "N806"]

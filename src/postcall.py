@@ -37,17 +37,11 @@ class WordTimingsMixin:
 
     _pc_words: list[tuple[str, float, float]]
 
-    async def stt_node(
-        self, audio: AsyncIterable[rtc.AudioFrame], model_settings: ModelSettings
-    ):  # type: ignore[override]
+    async def stt_node(self, audio: AsyncIterable[rtc.AudioFrame], model_settings: ModelSettings):  # type: ignore[override]
         if not hasattr(self, "_pc_words"):
             self._pc_words = []
         async for ev in Agent.default.stt_node(self, audio, model_settings):  # type: ignore[arg-type]
-            if (
-                isinstance(ev, stt.SpeechEvent)
-                and ev.type == stt.SpeechEventType.FINAL_TRANSCRIPT
-                and ev.alternatives
-            ):
+            if isinstance(ev, stt.SpeechEvent) and ev.type == stt.SpeechEventType.FINAL_TRANSCRIPT and ev.alternatives:
                 for w in ev.alternatives[0].words or []:
                     a, b = getattr(w, "start_time", None), getattr(w, "end_time", None)
                     if isinstance(a, (int, float)) and isinstance(b, (int, float)):
@@ -71,14 +65,8 @@ class _Dump:
 
     def emit(self, type_: str, payload: dict[str, Any]) -> None:
         self.seq += 1
-        ev = {
-            "schema_version": 1,
-            "call_id": self.call_id,
-            "seq": self.seq,
-            "type": type_,
-            "occurred_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-            "payload": payload,
-        }
+        ev = {"schema_version": 1, "call_id": self.call_id, "seq": self.seq, "type": type_,
+              "occurred_at": dt.datetime.now(dt.timezone.utc).isoformat(), "payload": payload}
         try:
             with self.path.open("a") as f:
                 f.write(json.dumps(ev, separators=(",", ":"), default=str) + "\n")
@@ -87,48 +75,25 @@ class _Dump:
 
 
 def _turn_record(item: Any) -> dict[str, Any] | None:
-    if getattr(item, "type", None) != "message" or item.role not in (
-        "user",
-        "assistant",
-    ):
+    if getattr(item, "type", None) != "message" or item.role not in ("user", "assistant"):
         return None
     m = item.metrics or {}
-    ms = {
-        k: (round(v * 1000) if isinstance(v, (int, float)) else None)
-        for k, v in {
-            "transcription_delay_ms": m.get("transcription_delay"),
-            "end_of_turn_delay_ms": m.get("end_of_turn_delay"),
-            "llm_ttft_ms": m.get("llm_node_ttft"),
-            "tts_ttfb_ms": m.get("tts_node_ttfb"),
-            "e2e_ms": m.get("e2e_latency"),
-        }.items()
-    }
-    return {
-        "turn_id": item.id,
-        "role": "agent" if item.role == "assistant" else "candidate",
-        "text": item.text_content or "",
-        "interrupted": bool(item.interrupted),
-        "started_at": m.get("started_speaking_at"),
-        "ended_at": m.get("stopped_speaking_at"),
-        "metrics": ms,
-    }
+    ms = {k: (round(v * 1000) if isinstance(v, (int, float)) else None) for k, v in {
+        "transcription_delay_ms": m.get("transcription_delay"), "end_of_turn_delay_ms": m.get("end_of_turn_delay"),
+        "llm_ttft_ms": m.get("llm_node_ttft"), "tts_ttfb_ms": m.get("tts_node_ttfb"), "e2e_ms": m.get("e2e_latency"),
+    }.items()}
+    return {"turn_id": item.id, "role": "agent" if item.role == "assistant" else "candidate",
+            "text": item.text_content or "", "interrupted": bool(item.interrupted),
+            "started_at": m.get("started_speaking_at"), "ended_at": m.get("stopped_speaking_at"), "metrics": ms}
 
 
-def attach_postcall(
-    session: AgentSession,
-    agent: Agent,
-    call_id: str,
-    *,
-    answer_tools: set[str] = frozenset({"record_answer"}),
-    knockout_tools: set[str] = frozenset({"mark_knockout"}),
-    dump_dir: str | os.PathLike | None = None,
-    meta: dict[str, Any] | None = None,
-) -> _Dump:
+def attach_postcall(session: AgentSession, agent: Agent, call_id: str, *,
+                    answer_tools: set[str] = frozenset({"record_answer"}),
+                    knockout_tools: set[str] = frozenset({"mark_knockout"}),
+                    dump_dir: str | os.PathLike | None = None, meta: dict[str, Any] | None = None) -> _Dump:
     """Register the listeners. Call before `session.start`. Returns the dump (emit `call_ended` yourself on shutdown
     if you want outcome fields; a bare `call_ended` is written when the session closes)."""
-    dump = _Dump(
-        call_id, pathlib.Path(dump_dir or os.environ.get("EVENTS_DUMP_DIR", "calls"))
-    )
+    dump = _Dump(call_id, pathlib.Path(dump_dir or os.environ.get("EVENTS_DUMP_DIR", "calls")))
     dump.emit("call_started", {"mode": "inbound", **(meta or {})})
     count = {"turns": 0, "interruptions": 0}
 
@@ -149,40 +114,18 @@ def attach_postcall(
     def _tools(ev: Any) -> None:
         for call in ev.function_calls:
             try:
-                args = (
-                    json.loads(call.arguments)
-                    if isinstance(call.arguments, str)
-                    else dict(call.arguments or {})
-                )
+                args = json.loads(call.arguments) if isinstance(call.arguments, str) else dict(call.arguments or {})
             except (TypeError, ValueError):
                 args = {"raw": str(call.arguments)}
             if call.name in answer_tools:
-                dump.emit(
-                    "tool_record_answer",
-                    {
-                        "question_id": str(
-                            args.get("question_id")
-                            or args.get("question_number")
-                            or call.name
-                        ),
-                        **{k: str(v)[:800] for k, v in args.items()},
-                    },
-                )
+                dump.emit("tool_record_answer", {"question_id": str(args.get("question_id") or args.get("question_number") or call.name),
+                                                 **{k: str(v)[:800] for k, v in args.items()}})
             elif call.name in knockout_tools:
-                dump.emit(
-                    "tool_mark_knockout", {k: str(v)[:500] for k, v in args.items()}
-                )
+                dump.emit("tool_mark_knockout", {k: str(v)[:500] for k, v in args.items()})
 
     @session.on("close")
     def _close(ev: Any) -> None:
-        dump.emit(
-            "call_ended",
-            {
-                "outcome": "completed",
-                "reason": getattr(ev, "reason", None),
-                "interruptions": count["interruptions"],
-                "transcript_rev": count["turns"],
-            },
-        )
+        dump.emit("call_ended", {"outcome": "completed", "reason": getattr(ev, "reason", None),
+                                 "interruptions": count["interruptions"], "transcript_rev": count["turns"]})
 
     return dump

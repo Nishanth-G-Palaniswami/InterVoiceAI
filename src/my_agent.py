@@ -191,6 +191,9 @@ class InterviewAgent(Agent):
         self._user_started_at: float | None = None
         self._probe_logged = False
         self._written: Path | None = None
+        # postcall event dump (set by agent.py); emits tool_record_answer once
+        # per recorded answer so the analysis lane splits main/follow-up right
+        self.postcall: Any | None = None
 
     # ---------- lifecycle ----------
 
@@ -366,6 +369,15 @@ class InterviewAgent(Agent):
         answer.quality_hint = quality_hint
         answer.recorded = True
         logger.info("recorded %s (%s): %s", question_id, quality_hint, summary)
+        if self.postcall is not None:
+            self.postcall.emit(
+                "tool_record_answer",
+                {
+                    "question_id": question_id,
+                    "summary": summary[:800],
+                    "quality_hint": quality_hint,
+                },
+            )
         following = self._next_question(question_id)
         if following is None:
             return (
