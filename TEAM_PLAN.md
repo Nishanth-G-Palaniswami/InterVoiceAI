@@ -123,6 +123,16 @@ uv run pytest -q tests/test_delivery_port.py
 `LLM_PROVIDER=inference`, `GEMINI_LIVE_MODEL=gemini-3.5-flash-lite`, `STANDALONE_ROLE=roles/rn-med-surg.json`,
 `TTS_MODEL=cartesia/sonic-3.6`, `STT_MODEL=deepgram/nova-3`, `CARTESIA_VOICE_ID=…`.
 
+## Demo project facts (from the reference repo's IMPLEMENTATION_STATUS.md, 2026-11-06)
+
+- LiveKit project **`take2voiceai-agent`** (Adi's account). Number **+1 484 317 0249**. Dispatch rule `SDR_Gu48ZT8kjZ7R`
+  ("interviewer-call-in") routes to agent **`interviewer`**. Attaching the rule from the CLI failed there exactly as it
+  did on Alex's project (`invalid_argument`): it must be attached in the dashboard (number ⋮ → Assign dispatch rule).
+- Keys are not in any repo (correct). To run a worker here against that project: Adi invites Alex to the project, then
+  `lk cloud auth` → pick it → `lk app env --write --destination .env.local` in this repo, and `AGENT_NAME=interviewer`.
+- If the demo runs Adi's full product (web + agent) instead, its events land in Neon, not in `calls/`. Export one call with
+  `evals/ai_detect/export_call.sql` (read-only DB URL) and feed the JSON to `analyze_call.py` or drop it in `calls/`.
+
 ## Open decisions (settle before 5:30)
 
 - **Which LiveKit project answers the demo number?** One worker per project. Alex's project has the number and rule
