@@ -53,7 +53,33 @@ def quality() -> Models:
     )
 
 
-PRESETS = {"budget": budget, "quality": quality}
+def interview() -> Models:
+    """Deepgram Nova-3 for per-word timings and filler words, budget LLM and TTS.
+
+    The InterviewAgent reads word timings off the final transcripts to build its
+    delivery signals (pauses, pace, fillers). AssemblyAI offers no filler-word
+    switch, so this preset swaps only the STT and keeps the cheap defaults.
+    """
+    return Models(
+        stt=inference.STT(
+            model="deepgram/nova-3",
+            language="en",
+            extra_kwargs={
+                "interim_results": True,
+                "smart_format": False,  # keeps "um" / "uh" as plain tokens
+                "filler_words": True,
+                "punctuate": True,
+            },
+        ),
+        llm=inference.LLM(model="google/gemma-4-31b-it"),
+        tts=inference.TTS(
+            model="fishaudio/s2.1-pro", voice="fa4c9eb3dccc4806b382b40d61c6b10a"
+        ),
+        expressive=True,
+    )
+
+
+PRESETS = {"budget": budget, "quality": quality, "interview": interview}
 
 
 def load_models() -> Models:
