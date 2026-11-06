@@ -1,5 +1,18 @@
 # Take2 Voice Agent Hackathon — Starter
 
+> **InterVoiceAI** (Take2 hackathon build, 2026-11-06). A phone interviewer that asks
+> questions grounded in the caller's resume, forces one unscripted follow-up per answer,
+> and writes a recruiter-only integrity record (voice and text signals from the
+> post-interview lane). Candidates apply on the intake page; the agent recognises them by
+> caller ID or by name.
+>
+> - Apply page: `uv run python src/intake_app.py` -> http://127.0.0.1:3001 (writes `data/candidates/<id>.json`)
+> - Agent: `AGENT_PROFILE=mine` and `MODEL_PRESET=interview` in `.env.local`; iterate with
+>   `lk agent debugger start`, answer the number with `lk agent dev --deployment production`
+> - Records: `data/calls/<room>.json` (answers + integrity), `calls/<room>.events.jsonl` (for `evals/ai_detect`)
+> - Tests: `uv run pytest`; scenarios: `lk agent simulate text --scenarios scenarios-interview.yaml`
+> - Contract: `src/candidates.py`; UI workstream plan: `docs/plans/02-intake-ui.md`
+
 Build a voice agent that does **one job on a real phone call**, then demo it live
 while a judge plays a difficult caller.
 

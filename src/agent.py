@@ -33,6 +33,7 @@ import candidates
 from booking_agent import BookingAgent
 from models import load_models
 from my_agent import InterviewAgent
+from postcall import attach_postcall
 from question_plan import generate_plan
 from screener_agent import ScreenerAgent
 
@@ -187,6 +188,24 @@ async def entrypoint(ctx: JobContext) -> None:
             interview.write_call("dropped")
 
         ctx.add_shutdown_callback(save_partial_call)
+        # Live event dump (calls/<room>.events.jsonl) for the post-interview
+        # analysis lane and its dashboard. record_answer runs twice per question
+        # (the first call is the follow-up gate), so the agent emits the
+        # tool_record_answer event itself, once, when an answer is recorded.
+        # The identity tools are passed as the lane's "knockout" boundary: its
+        # answer splitter resets at that event, so the name/confirmation turns
+        # never count as the first answer.
+        interview.postcall = attach_postcall(
+            session,
+            agent,
+            ctx.room.name,
+            answer_tools=set(),
+            knockout_tools={"claim_by_name", "confirm_identity"},
+            meta={
+                "candidate_id": agent.candidate["id"] if agent.candidate else None,
+                "matched_by": agent.matched_by,
+            },
+        )
 
     await session.start(
         agent=agent,
