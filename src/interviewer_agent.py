@@ -111,7 +111,11 @@ async def claim_inbound(ctx: JobContext, s: Settings) -> DispatchMetadata | None
     identity = participant.identity
     ctx.log_context_fields = {"kind": "inbound", "room": ctx.room.name}
     if s.standalone_role:
-        name = first_word(await ask_once(ctx, s, identity, STANDALONE_NAME_QUESTION))
+        # Text simulations have no audio for the spoken name question; skip it and use a placeholder name.
+        if os.environ.get("STANDALONE_SKIP_NAME") == "1":
+            name = os.environ.get("STANDALONE_FIRST_NAME", "Sam")
+        else:
+            name = first_word(await ask_once(ctx, s, identity, STANDALONE_NAME_QUESTION))
         return standalone_metadata(s.standalone_role, room=ctx.room.name, participant_identity=identity, first_name=name)
 
     client = InboundClient(base_url=s.events_base_url, secret=s.events_secret)

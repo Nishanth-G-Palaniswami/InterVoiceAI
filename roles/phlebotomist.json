@@ -1,0 +1,260 @@
+{
+ "faq": [
+  {
+   "a": "I can't speak to pay figures, but a recruiter will review compensation with you directly.",
+   "q": "pay, salary, hourly rate, differential, sign-on bonus"
+  },
+  {
+   "a": "It's a full-time day shift position with early morning starts and alternating Saturdays. The recruiter will confirm exact shift hours.",
+   "q": "schedule, shifts, hours"
+  },
+  {
+   "a": "You will be working in a busy outpatient laboratory draw station, collaborating with a team of phlebotomists and lab staff to collect and process specimens for adult and pediatric patients.",
+   "q": "unit, floor, ratio, patients"
+  },
+  {
+   "a": "The recruiting team reviews every phone interview within a few business days and will reach out with next steps.",
+   "q": "next steps, timeline, when will I hear back"
+  },
+  {
+   "a": "I can't commit to a start date; the recruiter will discuss timing with you.",
+   "q": "start date, when can I start"
+  },
+  {
+   "a": "The hospital offers a competitive benefits package, and the recruiter can share details on coverage and plans.",
+   "q": "benefits, PTO, insurance"
+  },
+  {
+   "a": "The outpatient lab on the main Riverside campus in San Francisco, California",
+   "q": "location, where, city, state, parking"
+  },
+  {
+   "a": "The draw station uses Epic Beaker for laboratory information and collection documentation.",
+   "q": "lis, epic, beaker, charting, computer"
+  },
+  {
+   "a": "The draw station collects samples from both adult and pediatric patients, including capillary finger and heel sticks.",
+   "q": "pediatrics, children, infants"
+  }
+ ],
+ "plan": {
+  "avoid": [
+   "pay figures",
+   "offers or hiring promises",
+   "start dates",
+   "age, family, religion, national origin, disability, pregnancy, or any protected characteristic",
+   "medical or legal advice",
+   "discussing specific lab test results or diagnostic interpretations with candidates",
+   "giving medical advice regarding fasting or medication holds",
+   "promising specific hourly wage rates or hiring bonuses",
+   "promising a specific start date"
+  ],
+  "steps": [
+   {
+    "id": "open",
+    "stage": "open"
+   },
+   {
+    "id": "identity",
+    "stage": "identity"
+   },
+   {
+    "ids": [
+     "ko_phlebotomy_certification",
+     "ko_clinical_experience",
+     "ko_schedule_availability"
+    ],
+    "stage": "knockouts"
+   },
+   {
+    "ids": [
+     "q_technical_venipuncture",
+     "q_patient_care_anxiety",
+     "q_specimen_integrity_safety",
+     "q_workflow_teamwork"
+    ],
+    "stage": "core",
+    "min_core_if_short_on_time": 2
+   },
+   {
+    "stage": "candidate_q",
+    "max_questions": 2
+   },
+   {
+    "id": "close",
+    "stage": "close"
+   }
+  ],
+  "plan_source": "template",
+  "plan_version": 1,
+  "time_budget_s": {
+   "hard_close": 540,
+   "soft_close": 420
+  }
+ },
+ "title": "Phlebotomist (Outpatient Lab)",
+ "version": 2,
+ "keyterms": [
+  "phlebotomy",
+  "venipuncture",
+  "capillary stick",
+  "heel stick",
+  "fingerstick",
+  "vacutainer",
+  "butterfly needle",
+  "tourniquet",
+  "Epic Beaker",
+  "order of draw",
+  "centrifuge",
+  "hemolysis",
+  "SST tube",
+  "EDTA",
+  "lavender top",
+  "light blue top",
+  "blood cultures",
+  "two identifiers",
+  "vasovagal",
+  "syncope",
+  "pediatric draw",
+  "difficult draw",
+  "LIS",
+  "specimen processing",
+  "CLSI",
+  "anticoagulant",
+  "infection control",
+  "PPE",
+  "bloodborne pathogens",
+  "BLS",
+  "CPT 1"
+ ],
+ "org_name": "Riverside Community Hospital",
+ "knockouts": [
+  {
+   "id": "ko_phlebotomy_certification",
+   "clarify": "Is that a California CPT 1, and is it active right now?",
+   "fail_if": "No certification, expired without renewal, or uncertified.",
+   "pass_if": "Yes, an active California CPT 1. Another state's certificate or a California application in progress is unclear.",
+   "question": "Do you currently hold an active California CPT 1 phlebotomy certification?"
+  },
+  {
+   "id": "ko_clinical_experience",
+   "clarify": "How many months of hands-on clinical venipuncture do you have?",
+   "fail_if": "Fewer than six months of clinical venipuncture or classroom only.",
+   "pass_if": "Yes, six or more months of clinical hands-on venipuncture experience.",
+   "question": "Do you have at least six months of hands-on venipuncture experience in a clinical setting?"
+  },
+  {
+   "id": "ko_schedule_availability",
+   "clarify": "Can you work early morning shifts and alternating Saturdays?",
+   "fail_if": "Cannot work early mornings or cannot work alternating Saturdays.",
+   "pass_if": "Yes, or minor schedule constraints that can be accommodated.",
+   "question": "This role requires early morning starts and alternating Saturdays. Does that schedule work for you?"
+  }
+ ],
+ "role_slug": "phlebotomist",
+ "thresholds": {
+  "pass": 60,
+  "strong": 80
+ },
+ "competencies": [
+  {
+   "id": "technical_venipuncture",
+   "name": "Venipuncture technique and difficult draws",
+   "weight": 0.35,
+   "anchors": {
+    "1": "Cannot describe technique for difficult veins or describes unsafe resticking without assessment.",
+    "2": "Gives generic advice like using a smaller needle without explaining site selection or vein assessment.",
+    "3": "Describes a real difficult draw on an adult or child, but details on vein selection or alternative techniques are limited.",
+    "4": "Explains specific techniques for rolling or fragile veins, such as warm compresses, butterfly needles, or pediatric capillary sticks, with a successful draw.",
+    "5": "Thoroughly details vein assessment, equipment choice, pediatric or difficult draw modifications, adherence to stick limits, and successful outcome."
+   },
+   "must_have_signals": [
+    "proper vein assessment",
+    "adapts to difficult or pediatric veins",
+    "adheres to stick limits"
+   ]
+  },
+  {
+   "id": "patient_care_anxiety",
+   "name": "Patient communication and anxiety management",
+   "weight": 0.25,
+   "anchors": {
+    "1": "Shows impatience with needle-phobic patients or dismisses pediatric distress.",
+    "2": "States they tell patients to relax without specific calming techniques or explanation.",
+    "3": "Shares an example of calming an anxious patient or child with limited detail on specific wording or actions.",
+    "4": "Uses age-appropriate distraction, clear explanations, and monitors for vasovagal symptoms like dizziness or pallor.",
+    "5": "De-escalates severe needle phobia or pediatric distress with empathy, positions for safety, prevents fainting, and completes draw safely."
+   },
+   "must_have_signals": [
+    "empathy and de-escalation",
+    "monitors for fainting",
+    "age-appropriate explanation"
+   ]
+  },
+  {
+   "id": "specimen_integrity_safety",
+   "name": "Patient identification and specimen integrity",
+   "weight": 0.25,
+   "anchors": {
+    "1": "Pre-labels tubes, skips two-patient identifiers, or disregards specimen handling protocol.",
+    "2": "Mentions checking IDs but cannot describe order of draw, inversion, or immediate chairside labeling.",
+    "3": "Describes verifying patient identity and labeling tubes with limited detail on handling or error prevention.",
+    "4": "Consistently verifies two patient identifiers, labels specimens at chairside, and describes proper order of draw and processing.",
+    "5": "Demonstrates strict adherence to two-identifier verification, immediate labeling, correct tube inversion, and catches or prevents a mislabeling error."
+   },
+   "must_have_signals": [
+    "two patient identifiers",
+    "chairside labeling",
+    "order of draw"
+   ]
+  },
+  {
+   "id": "workflow_teamwork",
+   "name": "Workflow efficiency and teamwork during peak volume",
+   "weight": 0.15,
+   "anchors": {
+    "1": "Becomes flustered under rush, refuses to assist colleagues, or cuts safety corners to speed up.",
+    "2": "Claims to work fast without explaining how they maintain accuracy and safety during rush hours.",
+    "3": "Describes working through a busy morning draw line, but vague on coordination with teammates or restocking.",
+    "4": "Maintains calm accuracy during peak rushes, communicates with team members to balance the draw queue, and restocks supplies.",
+    "5": "Prioritizes urgent draws, balances speed with safety protocols, collaborates smoothly with peers to reduce wait times, and maintains clean stations."
+   },
+   "must_have_signals": [
+    "maintains safety under pressure",
+    "collaborates with team",
+    "prioritizes workflow"
+   ]
+  }
+ ],
+ "question_bank": [
+  {
+   "id": "q_technical_venipuncture",
+   "probe": "What specific tools or vein selection technique did you use to get the sample?",
+   "short": "Tell me about a time you handled a difficult blood draw.",
+   "question": "Tell me about a time you had a very difficult blood draw, such as with rolling veins or a young child. How did you handle it?",
+   "competency": "technical_venipuncture"
+  },
+  {
+   "id": "q_patient_care_anxiety",
+   "probe": "What exact words or techniques did you use to help them feel comfortable?",
+   "short": "Tell me about calming a patient who was terrified of needles.",
+   "question": "Tell me about a time you worked with a patient or child who was terrified of needles. How did you put them at ease?",
+   "competency": "patient_care_anxiety"
+  },
+  {
+   "id": "q_specimen_integrity_safety",
+   "probe": "How did you discover the issue, and what steps did you take to correct it?",
+   "short": "Tell me about catching a patient identification or labeling error.",
+   "question": "Tell me about a time you caught a potential error with patient identification or specimen labeling before it reached the lab.",
+   "competency": "specimen_integrity_safety"
+  },
+  {
+   "id": "q_workflow_teamwork",
+   "probe": "How did you coordinate with your teammates to keep wait times down?",
+   "short": "How did you handle a packed waiting room during a morning rush?",
+   "question": "Tell me about a morning when your draw station had a full waiting room. How did you manage the rush while staying accurate?",
+   "competency": "workflow_teamwork"
+  }
+ ],
+ "question_bank_version": 2
+}
