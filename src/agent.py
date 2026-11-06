@@ -192,11 +192,15 @@ async def entrypoint(ctx: JobContext) -> None:
         # analysis lane and its dashboard. record_answer runs twice per question
         # (the first call is the follow-up gate), so the agent emits the
         # tool_record_answer event itself, once, when an answer is recorded.
+        # The identity tools are passed as the lane's "knockout" boundary: its
+        # answer splitter resets at that event, so the name/confirmation turns
+        # never count as the first answer.
         interview.postcall = attach_postcall(
             session,
             agent,
             ctx.room.name,
             answer_tools=set(),
+            knockout_tools={"claim_by_name", "confirm_identity"},
             meta={
                 "candidate_id": agent.candidate["id"] if agent.candidate else None,
                 "matched_by": agent.matched_by,
