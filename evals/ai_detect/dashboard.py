@@ -164,7 +164,7 @@ HTML = r"""<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 __LIVE_META__
-<title>Cheat Detection</title>
+<title>Interview Integrity</title>
 <style>
 :root{
   --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781; --grid:#e1e0d9; --axis:#c3c2b7;
@@ -240,6 +240,31 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--s1);outline-off
 .method{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
 .method p{margin:0 0 6px}
 .method b{display:block;margin-bottom:2px}
+.hero{margin:6px 0 10px}
+.herogrid{display:grid;grid-template-columns:1fr 260px;gap:12px;margin-bottom:12px}
+.verdict{border-radius:10px;padding:18px 20px;border:1px solid var(--grid);background:var(--surface);border-left:8px solid var(--good)}
+.verdict.crit{border-left-color:var(--crit)}.verdict.warn{border-left-color:var(--warn)}.verdict.good{border-left-color:var(--good)}
+.verdict .k,.scorecard .k,.reasons .k,.waiting .k{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.vtitle{font-size:30px;font-weight:700;letter-spacing:-.01em;margin:6px 0 4px;line-height:1.1}
+.vsub{color:var(--ink2);max-width:70ch}
+.vmeta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:14px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.vmeta b{color:var(--ink)}
+.scorecard{border-radius:10px;padding:18px 20px;border:1px solid var(--grid);background:var(--surface);display:flex;flex-direction:column;justify-content:center}
+.scorecard .big{font-size:56px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;margin:6px 0 10px}
+.scorecard .of{font-size:18px;color:var(--muted);font-weight:500;margin-left:4px}
+.scorecard .meter{width:100%;position:relative;overflow:visible}
+.scorecard .thr{position:absolute;top:-4px;width:2px;height:16px;background:var(--ink);opacity:.6}
+.scorecard .b{font-size:13px;color:var(--ink2);margin-top:8px}
+.reasons{margin-bottom:12px}
+.reasons ul{margin:8px 0 0;padding-left:18px;display:grid;gap:8px}
+.reasons li{font-size:14px;color:var(--ink2)}
+.reasons li b{color:var(--ink)}
+.hero .decision{border-top:0;padding-top:0}
+.waiting p{color:var(--ink2);margin:6px 0 0}
+hr.break{border:0;border-top:2px dashed var(--axis);margin:34px 0 10px;page-break-after:always;break-after:page}
+h2.pagehead{font-size:24px;margin:0 0 4px}
+.earlier{margin-top:12px}
+@media (max-width:760px){ .herogrid{grid-template-columns:1fr} }
 @media (max-width:640px){ .ans{grid-template-columns:1fr} }
 </style>
 </head>
@@ -247,42 +272,125 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--s1);outline-off
 <div class="wrap">
 <header>
   <div>
-    <h1>Cheat detection on AI phone screens</h1>
-    <p class="sub">Does a candidate's answer read as AI-generated, and did it sound read aloud? Two independent signal sets, combined into an observation for the recruiter. Never a score, never said to the caller.</p>
+    <h1>Interview integrity</h1>
+    <p class="sub">For the recruiter running the screen. Did the candidate's answers read as AI-generated, and did they sound read aloud? Evidence, a score, and your decision. The analysis never speaks to the candidate.</p>
   </div>
   <div class="stamp" id="stamp">__LIVE_BADGE__</div>
 </header>
 
-<h2>Headline, with the do-nothing baselines</h2>
-<div class="tiles" id="tiles"></div>
+<section id="recruiter" class="hero"></section>
 
+<hr class="break">
+<h2 class="pagehead">Interview breakdown</h2>
+<p class="sub">Every recorded answer of the current call with the signals behind it, then the call mechanics. Updates as the call runs.</p>
+<div id="breakdown" class="calls"></div>
+<details class="panel earlier" id="earlier"><summary>Earlier calls</summary><div class="calls" id="earlier-calls"></div></details>
+
+<hr class="break">
+<h2 class="pagehead">Detector performance</h2>
+<p class="sub">How the detector behaves on labelled answers, beside the do-nothing baselines. This is the evidence behind the score above.</p>
+<div class="tiles" id="tiles"></div>
 <h2>Catch rate vs false-flag rate, per detector variant</h2>
 <div class="panel">
   <div class="legend"><span><i style="background:var(--s1)"></i>Catch rate on AI-written answers</span><span><i style="background:var(--s2)"></i>False-flag rate on human answers</span></div>
   <div id="chart"></div>
 </div>
-
 <h2>The four tiers</h2>
 <div class="panel tbl"><table id="tiers"></table></div>
-
-<h2>Analyzed calls</h2>
-<div class="calls" id="calls"></div>
 
 <h2>How it works, and what it cannot claim</h2>
 <div class="method">
   <div class="panel"><b>Voice side: did it sound read?</b><p>Onset delay after the question, words per minute, fillers and mid-sentence pauses per 100 words, restarts, and the fluency drop when the agent asks an unscripted follow-up about a detail the candidate just said. Three or more signals on an answer of 40+ words = "sounds read".</p></div>
   <div class="panel"><b>Text side: does the transcript read as generated?</b><p>No disfluencies in the transcript, enumerating markers, no concrete details or episode markers, long uniform sentences, formal register, stock competency phrases. Three or more on 25+ words = "reads generated".</p></div>
-  <div class="panel"><b>Combined</b><p>Text alone is a note. Voice alone is a note. Both together is "AI-assisted", the only verdict we treat as strong. The unscripted follow-up is the signal a script cannot anticipate.</p></div>
-  <div class="panel"><b>Caveats we say out loud</b><p>Thresholds are uncalibrated until enough real calls exist. Fixture humans are synthetic, and their word timings come from assumed speaking profiles. Fluent speakers, prepared honest stories, non-native speakers and anxious candidates all look like readers to a naive detector; that is why it is an observation for a human, with the numbers behind it, and never an auto-reject.</p></div>
+  <div class="panel"><b>Combined, and the score</b><p>Text alone is a note. Voice alone is a note. Both together is "AI-assisted". The score (0 to 100) comes from the two strongest answers, discounted when fewer than three answers were long enough to judge. Bands: under 35 no indication, 35 to 59 possible, 60 and above likely.</p></div>
+  <div class="panel"><b>Caveats we say out loud</b><p>Thresholds are uncalibrated until enough real calls exist. Fluent speakers, prepared honest stories, non-native speakers and anxious candidates all look like readers to a naive detector; that is why it is an observation for a human, with the numbers behind it, and never an auto-reject.</p></div>
 </div>
 </div>
 <div class="tip" id="tip"></div>
+
 <script id="data" type="application/json">__DATA__</script>
 <script>
 const D = JSON.parse(document.getElementById('data').textContent);
 const pct = x => x == null ? 'n/a' : Math.round(x * 100) + '%';
 document.getElementById('stamp').insertAdjacentText('beforeend', ` Generated ${D.generated_at} · ${D.n_fixtures} labelled answers · ${D.calls.length} call(s)` + (D.db_feed ? (D.db_error ? ` · database feed error: ${D.db_error}` : ' · database feed on') : ' · local files only'));
 
+// ---- Recruiter view: the current (most recent) call ----
+const THRESHOLD = 0.6;  // confidence at or above this = "likely AI-assisted" (band high)
+const badge = v => ({ ai_assisted: ['crit', '● AI-assisted'], reads_generated: ['warn', '▲ reads generated'], sounds_read: ['warn', '▲ sounds read'], none: ['good', '✓ no flags'], ineligible: ['mute', '– too short'] }[v] || ['mute', v]);
+const current = D.calls[0] || null;
+const hero = document.getElementById('recruiter');
+if (!current) {
+  hero.innerHTML = `<div class="panel waiting"><div class="k">Waiting for the first call</div><p>${D.db_feed ? (D.db_error ? 'Database feed error: ' + D.db_error : 'Database feed connected. The call appears here as soon as its first event lands.') : 'No feed connected yet. Add DATABASE_URL_READONLY to .env.local, or drop a call\'s events into calls/.'}</p></div>`;
+} else {
+  const conf = current.confidence || { score: 0, band: 'low', eligible_answers: 0, answers: 0, strong: [], flagged: [] };
+  const score = Math.round(conf.score * 100);
+  const verdict = conf.score >= THRESHOLD ? ['crit', 'Likely AI-assisted', 'Above the threshold. Two independent signal sets agree on at least one answer.']
+                : conf.band === 'medium' ? ['warn', 'Possible AI assistance', 'Below the threshold. One side flagged, or weak agreement. Read the reasons before deciding.']
+                : ['good', 'No indication of AI assistance', 'Below the threshold on every recorded answer so far.'];
+  const inProgress = !current.outcome;
+  const reasons = [];
+  (current.answers || []).forEach(a => {
+    if (a.verdict === 'ai_assisted' || a.verdict === 'reads_generated' || a.verdict === 'sounds_read') {
+      const [cls, lab] = badge(a.verdict);
+      reasons.push(`<li><span class="badge ${cls}">${lab}</span> <b>${a.question_id}</b> (answer score ${Math.round((a.confidence || 0) * 100)}): ${a.evidence.slice(0, 4).join('; ')}</li>`);
+    }
+  });
+  (current.problems || []).filter(p => p.severity === 'high' && !(current.answers || []).some(a => a.question_id === p.area)).forEach(p => reasons.push(`<li><span class="sev high">high</span> <b>${p.area}</b>: ${p.note}</li>`));
+  const total = (current.answers || []).length, flagged = (conf.flagged || []).length, strong = (conf.strong || []).length;
+  hero.innerHTML = `
+    <div class="herogrid">
+      <div class="verdict ${verdict[0]}">
+        <div class="k">${inProgress ? '● Call in progress' : 'Call complete'} · ${current.id}${current.duration_s ? ` · ${current.duration_s} s` : ''}</div>
+        <div class="vtitle">${verdict[1]}</div>
+        <div class="vsub">${verdict[2]}</div>
+        <div class="vmeta"><span><b>${strong}</b> of ${total} answers AI-assisted (both sides)</span><span><b>${flagged}</b> flagged on one side or both</span><span><b>${conf.eligible_answers}</b> of ${total} long enough to judge</span></div>
+      </div>
+      <div class="scorecard">
+        <div class="k">Overall score</div>
+        <div class="big">${score}<span class="of">/100</span></div>
+        <div class="meter"><i style="width:${score}%;background:var(--${verdict[0]})"></i><span class="thr" style="left:${THRESHOLD * 100}%" title="threshold ${THRESHOLD * 100}"></span></div>
+        <div class="b">threshold ${THRESHOLD * 100} · ${conf.band} confidence</div>
+      </div>
+    </div>
+    <div class="reasons panel">
+      <div class="k">Reasons</div>
+      ${reasons.length ? `<ul>${reasons.join('')}</ul>` : `<p class="empty">${total ? 'No answer has crossed a signal threshold yet.' : 'No answers recorded yet; the first one appears after the agent records it.'}</p>`}
+    </div>
+    <div class="decision" data-call="${current.id}"><span class="lbl">Your decision</span><button class="go" data-v="go">Go</button><button class="hold" data-v="hold">Follow up</button><button class="nogo" data-v="nogo">No-go</button><input type="text" id="note-${current.id}" placeholder="Why (saved on this device only)"><span class="saved"></span></div>`;
+}
+
+// ---- Interview breakdown: answers of the current call, then earlier calls ----
+const answerBlock = a => { const [cls, lab] = badge(a.verdict); const d = a.delivery; const t = a.text;
+  return `<div class="ans"><div><span class="badge ${cls}">${lab}</span><div class="qid">${a.question_id} · score ${Math.round((a.confidence || 0) * 100)}</div></div><div>
+    <div class="metrics">${d ? `<span>onset <b>${d.onset_ms ?? '?'} ms</b></span><span><b>${d.main.wpm ?? '?'}</b> wpm</span><span>fillers <b>${d.main.fillers_per100}</b>/100</span><span>pauses <b>${d.main.pauses_per100}</b>/100</span><span>restarts <b>${d.main.restarts_per100}</b>/100</span>${d.follow_up ? `<span>follow-up disfluency <b>${d.follow_up.disfluency_per100}</b> vs <b>${d.main.disfluency_per100}</b></span>` : ''}` : '<span>no word timings</span>'}<span><b>${t.words}</b> words</span><span>text signals <b>${t.signals.length}</b>/6</span></div>
+    ${a.evidence.length ? `<ul class="ev">${a.evidence.map(e => `<li>${e}</li>`).join('')}</ul>` : '<div class="empty">no signals</div>'}</div></div>`; };
+const callCard = (c, withDecision) => {
+  const conf = c.confidence || { score: 0, band: 'low', eligible_answers: 0, answers: 0 };
+  const color = conf.band === 'high' ? 'var(--crit)' : conf.band === 'medium' ? 'var(--warn)' : 'var(--good)';
+  const head = `<div class="callhead"><div><h3>Call <small>${c.id}</small> ${c.outcome ? `<small>${c.outcome} · ${c.duration_s ?? '?'} s · ${c.turns} turns</small>` : '<small>in progress</small>'} ${c.started_at ? `<small>${c.started_at}</small>` : ''}</h3>
+      ${c.problems && c.problems.length ? `<ul class="problems">${c.problems.map(p => `<li><span class="sev ${p.severity}">${p.severity}</span><span><b>${p.area}</b>: ${p.note}</span></li>`).join('')}</ul>` : '<div class="empty" style="margin-bottom:10px">No problem areas detected on this call.</div>'}</div>
+    <div class="conf"><div><div class="score">${Math.round(conf.score * 100)}</div><div class="band">${conf.band} confidence · ${conf.eligible_answers}/${conf.answers} answers eligible</div></div><div class="meter"><i style="width:${Math.round(conf.score * 100)}%;background:${color}"></i></div></div></div>`;
+  const body = c.error ? `<div class="empty">${c.error}</div>` : c.answers.length ? c.answers.map(answerBlock).join('') : '<div class="empty">no recorded answers yet</div>';
+  const dec = withDecision ? `<div class="decision" data-call="${c.id}"><span class="lbl">Recruiter decision</span><button class="go" data-v="go">Go</button><button class="hold" data-v="hold">Follow up</button><button class="nogo" data-v="nogo">No-go</button><input type="text" id="note2-${c.id}" placeholder="Why (saved on this device only)"><span class="saved"></span></div>` : '';
+  return `<div class="call">${head}${body}${dec}</div>`;
+};
+document.getElementById('breakdown').innerHTML = current ? callCard(current, false) : '<div class="panel empty">The breakdown fills in once a call is in progress.</div>';
+const earlier = D.calls.slice(1);
+const earlierEl = document.getElementById('earlier');
+if (earlier.length) { document.getElementById('earlier-calls').innerHTML = earlier.map(c => callCard(c, true)).join(''); earlierEl.querySelector('summary').textContent = `Earlier calls (${earlier.length})`; } else { earlierEl.hidden = true; }
+
+// Human in the loop: the decision is the recruiter's. Nothing is pre-selected; saved per device in localStorage.
+const store = { get(k) { try { return JSON.parse(localStorage.getItem('cheat-detect:' + k) || 'null'); } catch { return null; } }, set(k, v) { try { localStorage.setItem('cheat-detect:' + k, JSON.stringify(v)); return true; } catch { return false; } } };
+document.querySelectorAll('.decision').forEach(d => {
+  const id = d.dataset.call, note = d.querySelector('input'), saved = d.querySelector('.saved');
+  const render = s => { d.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(!!s && b.dataset.v === s.v))); if (s) { if (document.activeElement !== note) note.value = s.note || ''; saved.textContent = `saved ${s.at}`; } };
+  render(store.get(id));
+  const save = v => { const s = { v: v ?? (d.querySelector('[aria-pressed="true"]')?.dataset.v || null), note: note.value, at: new Date().toLocaleTimeString() }; if (!store.set(id, s)) saved.textContent = 'could not save on this device'; else render(s); };
+  d.querySelectorAll('button').forEach(b => b.addEventListener('click', () => save(b.dataset.v)));
+  note.addEventListener('change', () => save(null));
+});
+
+// ---- Detector performance (deeper insight) ----
 // Tiles
 const both = D.detectors.find(d => d.name === 'Both sides agree');
 const coin = D.detectors.find(d => d.name === 'Coin flip');
@@ -334,34 +442,6 @@ document.getElementById('tiles').innerHTML = tiles.map(t => `<div class="tile"><
 document.getElementById('tiers').innerHTML = `<thead><tr><th>Tier</th><th>What it is</th><th class="n">n</th><th class="n">Text flags</th><th class="n">Voice flags</th><th class="n">Both</th><th class="n">Median text signals</th></tr></thead><tbody>` +
   D.tiers.map(t => `<tr><td><code>${t.tier}</code></td><td>${{ai_verbatim:'generated text read aloud', ai_paraphrased:'generated text re-spoken in own words', human_spontaneous:'a story told live', human_prepared:'a rehearsed true story'}[t.tier] || ''}</td><td class="n">${t.n}</td><td class="n">${t.text}/${t.n}</td><td class="n">${t.voice}/${t.n}</td><td class="n">${t.both}/${t.n}</td><td class="n">${t.median_text_signals}</td></tr>`).join('') + '</tbody>';
 
-// Calls
-const badge = v => ({ ai_assisted: ['crit', '● AI-assisted'], reads_generated: ['warn', '▲ reads generated'], sounds_read: ['warn', '▲ sounds read'], none: ['good', '✓ no flags'], ineligible: ['mute', '– too short'] }[v] || ['mute', v]);
-const callsEl = document.getElementById('calls');
-if (!D.calls.length) callsEl.innerHTML = `<div class="panel empty">No analyzed calls yet. Make a call to the number, then run <code>uv run python evals/ai_detect/dashboard.py</code> again; standalone mode writes calls/*.events.jsonl.</div>`;
-else callsEl.innerHTML = D.calls.map(c => {
-  const conf = c.confidence || { score: 0, band: 'low', eligible_answers: 0, answers: 0 };
-  const color = conf.band === 'high' ? 'var(--crit)' : conf.band === 'medium' ? 'var(--warn)' : 'var(--good)';
-  const head = `<div class="callhead"><div><h3>Call <small>${c.id}</small> ${c.outcome ? `<small>${c.outcome} · ${c.duration_s ?? '?'} s · ${c.turns} turns</small>` : ''} ${c.started_at ? `<small>${c.started_at}</small>` : ''}</h3>
-      ${c.problems && c.problems.length ? `<ul class="problems">${c.problems.map(p => `<li><span class="sev ${p.severity}">${p.severity}</span><span><b>${p.area}</b>: ${p.note}</span></li>`).join('')}</ul>` : '<div class="empty" style="margin-bottom:10px">No problem areas detected on this call.</div>'}</div>
-    <div class="conf" title="Confidence that AI assistance occurred, from the two strongest answers, discounted when fewer than three answers were eligible"><div><div class="score">${Math.round(conf.score * 100)}</div><div class="band">${conf.band} confidence · ${conf.eligible_answers}/${conf.answers} answers eligible</div></div><div class="meter"><i style="width:${Math.round(conf.score * 100)}%;background:${color}"></i></div></div></div>`;
-  const body = c.error ? `<div class="empty">${c.error}</div>` : c.answers.length ? c.answers.map(a => { const [cls, lab] = badge(a.verdict); const d = a.delivery; const t = a.text;
-    return `<div class="ans"><div><span class="badge ${cls}">${lab}</span><div class="qid">${a.question_id} · conf ${Math.round((a.confidence || 0) * 100)}</div></div><div>
-      <div class="metrics">${d ? `<span>onset <b>${d.onset_ms ?? '?'} ms</b></span><span><b>${d.main.wpm ?? '?'}</b> wpm</span><span>fillers <b>${d.main.fillers_per100}</b>/100</span><span>pauses <b>${d.main.pauses_per100}</b>/100</span><span>restarts <b>${d.main.restarts_per100}</b>/100</span>${d.follow_up ? `<span>follow-up disfluency <b>${d.follow_up.disfluency_per100}</b> vs <b>${d.main.disfluency_per100}</b></span>` : ''}` : '<span>no word timings</span>'}<span><b>${t.words}</b> words</span><span>text signals <b>${t.signals.length}</b>/6</span></div>
-      ${a.evidence.length ? `<ul class="ev">${a.evidence.map(e => `<li>${e}</li>`).join('')}</ul>` : '<div class="empty">no signals</div>'}</div></div>`; }).join('') : '<div class="empty">no recorded answers in this call</div>';
-  const dec = `<div class="decision" data-call="${c.id}"><span class="lbl">Recruiter decision</span><button class="go" data-v="go">Go</button><button class="hold" data-v="hold">Follow up</button><button class="nogo" data-v="nogo">No-go</button><input type="text" id="note-${c.id}" placeholder="Why (saved on this device only)"><span class="saved"></span></div>`;
-  return `<div class="call">${head}${body}${dec}</div>`;
-}).join('');
-
-// Human in the loop: the decision is the recruiter's. Nothing is pre-selected; saved per device in localStorage.
-const store = { get(k) { try { return JSON.parse(localStorage.getItem('cheat-detect:' + k) || 'null'); } catch { return null; } }, set(k, v) { try { localStorage.setItem('cheat-detect:' + k, JSON.stringify(v)); return true; } catch { return false; } } };
-document.querySelectorAll('.decision').forEach(d => {
-  const id = d.dataset.call, note = d.querySelector('input'), saved = d.querySelector('.saved');
-  const render = s => { d.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(!!s && b.dataset.v === s.v))); if (s) { note.value = s.note || ''; saved.textContent = `saved ${s.at}`; } };
-  render(store.get(id));
-  const save = v => { const s = { v: v ?? (d.querySelector('[aria-pressed="true"]')?.dataset.v || null), note: note.value, at: new Date().toLocaleTimeString() }; if (!store.set(id, s)) saved.textContent = 'could not save on this device'; else render(s); };
-  d.querySelectorAll('button').forEach(b => b.addEventListener('click', () => save(b.dataset.v)));
-  note.addEventListener('change', () => save(null));
-});
 </script>
 </body>
 </html>
