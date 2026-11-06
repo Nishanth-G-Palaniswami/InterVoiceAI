@@ -9,9 +9,14 @@ description = "Take2 voice agent hackathon starter, built on LiveKit Agents"
 requires-python = ">=3.10, <3.15"
 
 dependencies = [
+    "fastapi>=0.162.0",
+    "jinja2>=3.1.6",
     "livekit-agents~=1.8",
     "livekit-plugins-ai-coustics~=0.3",
+    "pypdf>=7.0.0",
     "python-dotenv",
+    "python-multipart>=0.0.32",
+    "uvicorn[standard]>=0.54.0",
 ]
 
 [dependency-groups]

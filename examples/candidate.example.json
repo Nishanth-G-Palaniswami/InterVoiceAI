@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "c_20261106-170211_maria-lopez",
+  "created_at": "2026-11-06T17:02:11-05:00",
+  "name": "Maria Lopez",
+  "phone": "2125550142",
+  "email": "maria.lopez@example.com",
+  "role": "Registered Nurse, Med-Surg",
+  "company": "Harbor Health",
+  "education": "BSN, Hunter College, 2021",
+  "years_experience": 3,
+  "answers": {
+    "current_job": "Staff RN on a 32-bed med-surg unit at Mount Sinai Queens, nights, 5 to 6 patients per shift.",
+    "biggest_project": "Led the unit's fall-prevention huddle rollout; falls dropped from 9 to 4 per quarter over six months.",
+    "why_this_role": "Harbor Health is closer to home and has a step-down unit I want to grow into."
+  },
+  "resume_text": "MARIA LOPEZ, RN, BSN\nQueens, NY | maria.lopez@example.com | (212) 555-0142\n\nSUMMARY\nMed-surg registered nurse with three years of acute-care experience on a high-acuity 32-bed unit. Charge nurse relief, preceptor for new graduates, member of the unit falls committee.\n\nEXPERIENCE\nStaff Nurse, Med-Surg (Nights) - Mount Sinai Queens, Astoria NY - Jul 2021 to present\n- Care for 5 to 6 post-surgical and medical patients per shift: telemetry, IV therapy, wound care, insulin drips.\n- Relief charge nurse two nights a week: bed assignments, staffing calls, rapid-response coordination.\n- Precepted four new-graduate nurses through their 12-week orientation.\n- Co-led the fall-prevention huddle rollout (hourly rounding, bed alarms, purposeful rounding script); unit falls fell from 9 to 4 per quarter.\n\nNurse Extern - NYC Health + Hospitals / Elmhurst - Jun 2020 to May 2021\n- Vital signs, patient mobility, and discharge teaching under RN supervision on a 40-bed medical unit.\n\nEDUCATION\nBachelor of Science in Nursing, Hunter-Bellevue School of Nursing, 2021\n\nLICENSES AND CERTIFICATIONS\nRegistered Nurse, New York State, active\nBLS and ACLS, American Heart Association\n\nSKILLS\nEpic, telemetry interpretation, IV insertion, wound vac management, Spanish (fluent)\n",
+  "resume_filename": "maria-lopez.txt",
+  "plan": null
+}
