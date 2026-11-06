@@ -1,0 +1,101 @@
+{
+ "_about": "Real spontaneous human speech from the AMI Meeting Corpus. Meeting talk, not interviews.",
+ "answers": [
+  {
+   "id": "ami_h_01",
+   "tier": "human_spontaneous",
+   "question_id": "q_ami",
+   "text": "Here we go. welcome everybody. um i'm abigail claflin. you can call me abbie. 's see. powerpoint that's not it. there we go. so this is our kick off meeting. um. and i guess we should all get acquainted. let's shall we all introduce ourselves.",
+   "follow_up_text": "",
+   "source": "AMI Meeting Corpus (edinburghcstr/ami, ihm, CC BY 4.0), meeting ES2011a speaker FEE041 34.3-64.3s; consecutive utterances joined, lowercased, utterance boundaries marked as sentence ends"
+  },
+  {
+   "id": "ami_h_02",
+   "tier": "human_spontaneous",
+   "question_id": "q_ami",
+   "text": "Okay. um so f here's our agenda for today. um we're gonna do some tool training project plan and discuss. then close. um so. so our aim is to produce a remote control that is original trendy and user friendly. and to do this we have to um there's certain things we have to consider about functional aspects and conceptual design of the thing. so. we'll get to that. oh there it is. right. functional design conceptual design and detailed design. so throughout our next couple of meetings we'll we'll be covering these things. um so we're gonna try out our white board. if we'll all draw our favourite animal to sum up the characteristics of that animal.",
+   "follow_up_text": "",
+   "source": "AMI Meeting Corpus (edinburghcstr/ami, ihm, CC BY 4.0), meeting ES2011a speaker FEE041 96.0-164.1s; consecutive utterances joined, lowercased, utterance boundaries marked as sentence ends"
+  },
+  {
+   "id": "ami_h_03",
+   "tier": "human_spontaneous",
+   "question_id": "q_ami",
+   "text": "Yeah he he doesn't look that smart. he's a i dunno um they're i think it's cool the the um the interaction that or the th things that the reasons people seem to like you know you get ex you know people are sitting on the beach and p they're like oh look there's dolphins and it's kinda like but they're you know they jump around in the water and they're happy and they're mammals. but they swim.",
+   "follow_up_text": "",
+   "source": "AMI Meeting Corpus (edinburghcstr/ami, ihm, CC BY 4.0), meeting ES2011a speaker FEE043 311.4-340.9s; consecutive utterances joined, lowercased, utterance boundaries marked as sentence ends"
+  },
+  {
+   "id": "ami_h_04",
+   "tier": "human_spontaneous",
+   "question_id": "q_ami",
+   "text": "Um and the main reason is they're pretty. i think they're very pretty and they go well with the environment. and i like the way they run and i used to do horse riding and they're just very sort of sturdy and nice animals. and i like the way um they feel sort of under under the hand i think that's pretty much it. um.",
+   "follow_up_text": "",
+   "source": "AMI Meeting Corpus (edinburghcstr/ami, ihm, CC BY 4.0), meeting ES2011a speaker FEE044 425.9-449.4s; consecutive utterances joined, lowercased, utterance boundaries marked as sentence ends"
+  },
+  {
+   "id": "ami_h_05",
+   "tier": "human_spontaneous",
+   "question_id": "q_ami",
+   "text": "Um i'll just review what we did in our last meeting. um under marketing we targeted our audience and. um yeah. that was generally how helpful that was. um then we considered some design options with how it should look um. we discussed an ipod like button system which uh we haven't concluded but we're. right um. so if you all have presentations to do we can see what where you've come from our last time. does everyone have presentations.",
+   "follow_up_text": "",
+   "source": "AMI Meeting Corpus (edinburghcstr/ami, ihm, CC BY 4.0), meeting ES2011c speaker FEE041 88.0-136.2s; consecutive utterances joined, lowercased, utterance boundaries marked as sentence ends"
+  },
+  {
+   "id": "ami_h_06",
+   "tier": "human_spontaneous",
+   "question_id": "q_ami",
+   "text": "Uh well we can use wood. i don't know why we'd want to. um and also we should note that if we want an ipod style wheel button it's gonna require a m qu slightly more expensive chip. we can't use the minimal chip we need the next higher grade which is called regular. i don't think it's much more expensive but it is more expensive. so that's what i've got on design.",
+   "follow_up_text": "",
+   "source": "AMI Meeting Corpus (edinburghcstr/ami, ihm, CC BY 4.0), meeting ES2011c speaker FEE042 246.3-268.4s; consecutive utterances joined, lowercased, utterance boundaries marked as sentence ends"
+  },
+  {
+   "id": "ami_h_07",
+   "tier": "human_spontaneous",
+   "question_id": "q_ami",
+   "text": "Right um i have been searching the current trends um both on the web and via fashion watchers. and the findings are that the first thing to aim for is a fashion uh fancy look and feel. um. next comes technologic technology and the innovations to do with that. and th last thing is the. easy to use um factor. um fancy look and feel goes far beyond the functionality of the thing but i suppose that is included in in the ease of use. um our fashion watchers in milan and paris have decided well noticed. that f the fruit and vegetable theme is the is the current trend and and therefore um we need to go for that if we want. you know wh whatever our motto is. um. for fashion we go for fashion.",
+   "follow_up_text": "",
+   "source": "AMI Meeting Corpus (edinburghcstr/ami, ihm, CC BY 4.0), meeting ES2011c speaker FEE044 310.2-373.1s; consecutive utterances joined, lowercased, utterance boundaries marked as sentence ends"
+  },
+  {
+   "id": "ami_h_08",
+   "tier": "human_spontaneous",
+   "question_id": "q_ami",
+   "text": "So so okay let me get this right. okay uh. okay alright anyway. um here we go. conceptual user interface. trying we're gonna try to talk about um what kind of uh how people are actually going to be using this ipod ish remote control. based on fruit vegetable design. and um basically so this is a touched ba a touch based graphical interface system. uh so people are going to be looking at this little screen. um kind of i mean i assume are we still on the screen idea.",
+   "follow_up_text": "",
+   "source": "AMI Meeting Corpus (edinburghcstr/ami, ihm, CC BY 4.0), meeting ES2011c speaker FEE043 508.0-545.6s; consecutive utterances joined, lowercased, utterance boundaries marked as sentence ends"
+  },
+  {
+   "id": "ami_h_09",
+   "tier": "human_spontaneous",
+   "question_id": "q_ami",
+   "text": "So like the n the ones that we have now um a small filing cabinet with three drawers. and by small i mean they're about that tall and one sort of hanging shelf. so we don't get the bookcases like we have now but just one shelf that's attached to the wall.",
+   "follow_up_text": "",
+   "source": "AMI Meeting Corpus (edinburghcstr/ami, ihm, CC BY 4.0), meeting IB4001 speaker FIE038 133.3-146.9s; consecutive utterances joined, lowercased, utterance boundaries marked as sentence ends"
+  },
+  {
+   "id": "ami_h_10",
+   "tier": "human_spontaneous",
+   "question_id": "q_ami",
+   "text": "And we can because like i said maximum eighteen people in those rooms and there is only fifteen of us. and i don't know if you've noticed but two of us are only here half the time. so martin and david um are half the time at the e. p. f. l. and half the time in geneva. so. sort of keep that in mind i guess when.",
+   "follow_up_text": "",
+   "source": "AMI Meeting Corpus (edinburghcstr/ami, ihm, CC BY 4.0), meeting IB4001 speaker FIE038 329.3-351.6s; consecutive utterances joined, lowercased, utterance boundaries marked as sentence ends"
+  },
+  {
+   "id": "ami_h_11",
+   "tier": "human_spontaneous",
+   "question_id": "q_ami",
+   "text": "The purple bar at the bottom sort of on the right is the mail boxes. all of the windows open you can get out onto the terrace just like we can in our normal building. and the equipment that we have to put somewhere are like i said the photocopier which is really big. the fax machine which is not so big and the printer which is relatively big. each office has a white board a bulletin board and a coat rack.",
+   "follow_up_text": "",
+   "source": "AMI Meeting Corpus (edinburghcstr/ami, ihm, CC BY 4.0), meeting IB4001 speaker FIE038 97.2-126.1s; consecutive utterances joined, lowercased, utterance boundaries marked as sentence ends"
+  },
+  {
+   "id": "ami_h_12",
+   "tier": "human_spontaneous",
+   "question_id": "q_ami",
+   "text": "So the idea is that we come up with a plan. there's another group who's gonna be working on the same plan later this week. and then andre and i have to do presentations for the university administrators on the second. so we have to come up with a plan possibly if we have time a presentation. a quick presentation with arguments for why we think our plan works best. okay.",
+   "follow_up_text": "",
+   "source": "AMI Meeting Corpus (edinburghcstr/ami, ihm, CC BY 4.0), meeting IB4001 speaker FIE038 177.0-203.5s; consecutive utterances joined, lowercased, utterance boundaries marked as sentence ends"
+  }
+ ]
+}

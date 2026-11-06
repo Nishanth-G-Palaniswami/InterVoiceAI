@@ -78,11 +78,7 @@ def features(turns: list[CandTurn]) -> Features:
             continue
         # Deepgram word tokens carry no punctuation; borrow it from the punctuated text when the counts line up.
         tokens = t.text.strip().split()
-        punct = (
-            [bool(_PUNCT_END.search(x)) for x in tokens]
-            if len(tokens) == len(ws)
-            else None
-        )
+        punct = [bool(_PUNCT_END.search(x)) for x in tokens] if len(tokens) == len(ws) else None
         words += len(ws)
         seconds += max(0.0, float(ws[-1][2]) - float(ws[0][1]))
         for i, w_ in enumerate(ws):
@@ -123,6 +119,8 @@ def judge(m: Features, f: Features | None) -> tuple[list[str], bool, bool]:
     """(signals, sounds_read, eligible)."""
     T = THRESHOLDS
     signals: list[str] = []
+    if m.words == 0:
+        return signals, False, False
     if m.fillers_per100 < T["max_fillers_per100"]:
         signals.append("almost no fillers")
     if m.pauses_per100 < T["max_pauses_per100"]:
@@ -131,15 +129,8 @@ def judge(m: Features, f: Features | None) -> tuple[list[str], bool, bool]:
         signals.append("no restarts")
     if m.wpm is not None and m.wpm >= T["min_wpm"]:
         signals.append(f"steady fast pace ({m.wpm} wpm)")
-    if (
-        f
-        and f.words >= 8
-        and f.disfluency_per100
-        >= T["follow_up_drop_ratio"] * max(m.disfluency_per100, 1)
-    ):
-        signals.append(
-            f"follow-up much less fluent ({f.disfluency_per100} vs {m.disfluency_per100} per 100 words)"
-        )
+    if f and f.words >= 8 and f.disfluency_per100 >= T["follow_up_drop_ratio"] * max(m.disfluency_per100, 1):
+        signals.append(f"follow-up much less fluent ({f.disfluency_per100} vs {m.disfluency_per100} per 100 words)")
     eligible = m.words >= T["min_words"]
     return signals, eligible and len(signals) >= T["min_signals"], eligible
 
@@ -166,20 +157,19 @@ def answer_delivery(events: list[dict[str, Any]]) -> list[AnswerDelivery]:
         typ = ev.get("type")
         if typ == "turn" and p.get("role") == "agent":
             if is_question(str(p.get("text") or "")):
-                questions_asked += 1
-                asked_at = (
-                    p["ended_at"]
-                    if isinstance(p.get("ended_at"), (int, float))
-                    else None
-                )
+                # Before the candidate has spoken, every agent prompt is (still) the main question, so a transition
+                # sentence or a re-ask does not push the real answer into the follow-up bucket.
+                if main:
+                    questions_asked = max(questions_asked, 1) + 1
+                else:
+                    questions_asked = 1
+                    asked_at = p["ended_at"] if isinstance(p.get("ended_at"), (int, float)) else None
         elif typ == "turn" and p.get("role") == "candidate":
             t = CandTurn(
                 turn_id=str(p.get("turn_id")),
                 text=str(p.get("text") or ""),
                 words=list(p.get("words") or []),
-                started_at=p["started_at"]
-                if isinstance(p.get("started_at"), (int, float))
-                else None,
+                started_at=p["started_at"] if isinstance(p.get("started_at"), (int, float)) else None,
             )
             if questions_asked <= 1:
                 if not main and asked_at is not None and t.started_at is not None:
@@ -193,17 +183,10 @@ def answer_delivery(events: list[dict[str, Any]]) -> list[AnswerDelivery]:
             m = features(main)
             f = features(follow) if follow else None
             signals, sounds_read, eligible = judge(m, f)
-            out.append(
-                AnswerDelivery(
-                    question_id=str(p.get("question_id") or "?"),
-                    onset_ms=onset_ms,
-                    main=m,
-                    follow_up=f,
-                    signals=signals,
-                    sounds_read=sounds_read,
-                    eligible=eligible,
-                    turn_ids=[x.turn_id for x in main + follow],
-                )
-            )
+            out.append(AnswerDelivery(
+                question_id=str(p.get("question_id") or "?"), onset_ms=onset_ms, main=m, follow_up=f,
+                signals=signals, sounds_read=sounds_read, eligible=eligible,
+                turn_ids=[x.turn_id for x in main + follow],
+            ))
             reset()
     return out

@@ -189,13 +189,14 @@ async def entrypoint(ctx: JobContext) -> None:
 
         ctx.add_shutdown_callback(save_partial_call)
         # Live event dump (calls/<room>.events.jsonl) for the post-interview
-        # analysis lane and its dashboard. Note: record_answer runs twice per
-        # question; the first call is the follow-up gate ("Not recorded yet").
-        attach_postcall(
+        # analysis lane and its dashboard. record_answer runs twice per question
+        # (the first call is the follow-up gate), so the agent emits the
+        # tool_record_answer event itself, once, when an answer is recorded.
+        interview.postcall = attach_postcall(
             session,
             agent,
             ctx.room.name,
-            answer_tools={"record_answer"},
+            answer_tools=set(),
             meta={
                 "candidate_id": agent.candidate["id"] if agent.candidate else None,
                 "matched_by": agent.matched_by,
