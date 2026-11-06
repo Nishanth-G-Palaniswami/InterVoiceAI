@@ -10,6 +10,11 @@ follow-up per answer, and records what it heard for the recruiter.
   end            -> finish_interview writes data/calls/<room>.json (contract C2)
                     with the integrity observations from interviewer.delivery
                     (voice side) and interviewer.ai_text (text side)
+  every sentence -> the pre-TTS guardrail (interviewer.guardrail) checks it
+                    before it is spoken: model replies in llm_node, scripted
+                    lines in tts_node. Pay figures, offers, start dates and
+                    protected-class questions become a safe line; text that
+                    looks like a tool call is never spoken.
 
 The candidate's turns are read from the session history, so the same code works
 on a phone call, in the Agent Console and in the text debugger. Per-word STT
@@ -18,7 +23,9 @@ timings and the response onset are kept per turn for the voice-side signals.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import re
 from collections.abc import AsyncGenerator, AsyncIterable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -38,11 +45,13 @@ from livekit.agents import (
     stt,
 )
 from livekit.agents.beta.tools import EndCallTool
+from livekit.agents.types import FlushSentinel
 
 import candidates
 from candidates import Candidate, Question
 from interviewer.ai_text import Observation, call_confidence, observe, report_lines
 from interviewer.delivery import AnswerDelivery, CandTurn, features, judge
+from interviewer.guardrail import CheckResult, SentenceGate
 from prompts import build_instructions
 from question_plan import generate_plan
 
@@ -57,6 +66,15 @@ INTEGRITY_NOTE = (
 BAND_VERDICT = {"low": "natural", "medium": "inconclusive", "high": "likely_assisted"}
 
 Word = tuple[str, float, float]  # text, start_s, end_s (STT stream time)
+
+# This agent's own tools, which interviewer.guardrail's tool-text rule does not list
+# (it knows the reference interviewer's). Written-out calls are dropped before the
+# sentence check, e.g. `confirm_identity(confirmed=true)` read aloud by mistake.
+_OWN_TOOL_TEXT = re.compile(
+    r"(?:\bdefault_api[:.]\s*)?\b(?:claim_by_name|confirm_identity|finish_interview)\b"
+    r"\s*[({][^)}]{0,800}[)}]",
+    re.I,
+)
 
 
 @dataclass
@@ -199,6 +217,8 @@ class InterviewAgent(Agent):
         # postcall event dump (set by agent.py); emits tool_record_answer once
         # per recorded answer so the analysis lane splits main/follow-up right
         self.postcall: Any | None = None
+        # sentences the guardrail replaced before they were spoken
+        self.guardrail_events: list[dict[str, Any]] = []
 
     # ---------- lifecycle ----------
 
@@ -309,6 +329,89 @@ class InterviewAgent(Agent):
         collected.reverse()
         self._taken.update(t.item_id for t in collected)
         return collected
+
+    # ---------- guardrail (nothing unsafe reaches TTS) ----------
+
+    def _guard(self, r: CheckResult, source: str) -> str:
+        if not r.ok:
+            ev = {"rule": r.rule, "source": source}
+            self.guardrail_events.append(ev)
+            if self.postcall is not None:
+                self.postcall.emit("guardrail_event", ev)
+            logger.info(
+                "guardrail replaced a sentence rule=%s source=%s", r.rule, source
+            )
+        return r.text
+
+    async def llm_node(
+        self,
+        chat_ctx: llm.ChatContext,
+        tools: list[llm.Tool],
+        model_settings: ModelSettings,
+    ) -> AsyncIterable[llm.ChatChunk | str | FlushSentinel]:
+        """Model text is held back one sentence at a time and checked; tool calls
+        and provider extras (thought signatures) pass through untouched."""
+        gate = SentenceGate()
+        try:
+            async for chunk in Agent.default.llm_node(
+                self, chat_ctx, tools, model_settings
+            ):
+                if isinstance(chunk, llm.ChatChunk):
+                    d = chunk.delta
+                    if d is None:
+                        if chunk.usage is not None:
+                            yield chunk
+                        continue
+                    if d.tool_calls or d.extra:
+                        yield llm.ChatChunk(
+                            id=chunk.id,
+                            usage=chunk.usage,
+                            delta=llm.ChoiceDelta(
+                                role=d.role,
+                                content=None,
+                                tool_calls=d.tool_calls,
+                                extra=d.extra,
+                            ),
+                        )
+                    elif chunk.usage is not None and not d.content:
+                        yield chunk
+                    text = d.content or ""
+                elif isinstance(chunk, str):
+                    text = chunk
+                else:  # FlushSentinel: release what is buffered, then pass it on
+                    for r in gate.flush():
+                        yield self._guard(r, "llm")
+                    yield chunk
+                    continue
+                if text:
+                    for r in gate.feed(_OWN_TOOL_TEXT.sub("", text)):
+                        yield self._guard(r, "llm")
+            for r in gate.flush():
+                yield self._guard(r, "llm")
+        except (asyncio.CancelledError, GeneratorExit):
+            gate.drop()  # interrupted: whatever was buffered is never spoken
+            raise
+
+    async def tts_node(
+        self, text: AsyncIterable[str], model_settings: ModelSettings
+    ) -> AsyncGenerator[rtc.AudioFrame, None]:
+        """Final check on every speech path, including session.say and the
+        greeting. Already-checked model text passes at each sentence boundary."""
+        gate = SentenceGate()
+
+        async def checked() -> AsyncIterable[str]:
+            try:
+                async for t in text:
+                    for r in gate.feed(t):
+                        yield self._guard(r, "tts") if not r.ok else r.text
+                for r in gate.flush():
+                    yield self._guard(r, "tts") if not r.ok else r.text
+            except (asyncio.CancelledError, GeneratorExit):
+                gate.drop()
+                raise
+
+        async for frame in Agent.default.tts_node(self, checked(), model_settings):
+            yield frame
 
     # ---------- tools ----------
 
@@ -467,6 +570,7 @@ class InterviewAgent(Agent):
             "outcome": outcome,
             "answers": [entry for entry, _ in scored],
             "integrity": call_integrity(observations),
+            "guardrail_events": self.guardrail_events,
         }
         self._written = candidates.save_call(self.call_id, data)
         logger.info("call record written: %s (%s)", self._written, outcome)
