@@ -18,6 +18,7 @@ timings and the response onset are kept per turn for the voice-side signals.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator, AsyncIterable
 from dataclasses import dataclass, field
@@ -40,6 +41,7 @@ from livekit.agents import (
 from livekit.agents.beta.tools import EndCallTool
 
 import candidates
+from assessment import ASSESSMENT_NOTE, assess_call
 from candidates import Candidate, Question
 from interviewer.ai_text import Observation, call_confidence, observe, report_lines
 from interviewer.delivery import AnswerDelivery, CandTurn, features, judge
@@ -192,6 +194,8 @@ class InterviewAgent(Agent):
         self._user_started_at: float | None = None
         self._probe_logged = False
         self._written: Path | None = None
+        self._record: dict[str, Any] | None = None  # the C2 data as written
+        self._assess_task: asyncio.Task[None] | None = None
         self.identity_confirmed: bool | None = None
         # user messages in the history when the identity check was asked;
         # confirm_identity is only valid once the candidate has spoken since
@@ -440,6 +444,9 @@ class InterviewAgent(Agent):
                 "the candidate asked to stop."
             )
         self.write_call("completed" if not pending else "stopped")
+        # The assessment runs while the goodbye is being spoken; the shutdown
+        # callback awaits it, so a hang-up right after still gets it.
+        self.start_assessment()
         return (
             "Saved. Thank the candidate, say the recruiting team will follow up "
             "within two days, then end the call."
@@ -469,10 +476,38 @@ class InterviewAgent(Agent):
             "integrity": call_integrity(observations),
         }
         self._written = candidates.save_call(self.call_id, data)
+        self._record = data
         logger.info("call record written: %s (%s)", self._written, outcome)
         for line in report_lines(observations):
             logger.info(line)
         return self._written
+
+    def start_assessment(self) -> asyncio.Task[None]:
+        """Kick off the post-call assessment once; later calls return the task."""
+        if self._assess_task is None:
+            self._assess_task = asyncio.create_task(self._assess())
+        return self._assess_task
+
+    async def assess(self) -> None:
+        """Make sure the assessment has been added to the written record.
+        Called at shutdown (after the caller is gone), so it never delays a reply."""
+        await self.start_assessment()
+
+    async def _assess(self) -> None:
+        if self._record is None or "assessment" in self._record:
+            return
+        try:
+            result = await assess_call(self.candidate, self._record["answers"])
+        except Exception as err:  # recorded in the file and the log, never hidden
+            logger.exception("assessment failed for %s", self.call_id)
+            result = {
+                "status": "failed",
+                "error": f"{type(err).__name__}: {err}",
+                "note": ASSESSMENT_NOTE,
+            }
+        self._record["assessment"] = result
+        candidates.save_call(self.call_id, self._record)
+        logger.info("assessment saved for %s: %s", self.call_id, result["status"])
 
 
 def _user_messages(history: llm.ChatContext) -> int:
