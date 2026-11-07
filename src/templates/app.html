@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InterVoiceAI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap">
+<style>
+/* The record of a phone screen: paper, carbon ink, graphite, a highlighter on
+   flagged answers, the on-air light for a live call. One accent (ink blue) for
+   action and focus. Verdict colours always travel with a shape and a word. */
+:root{
+  --paper:#f6f4ee; --paper-raised:#fcfbf8; --paper-inset:#efece4; --manila:#ece3cc;
+  --ink:#1c1a16; --graphite:#4a463e; --pencil:#6b665b;
+  --rule:rgba(28,26,22,.12); --rule-soft:rgba(28,26,22,.07); --rule-strong:rgba(28,26,22,.24);
+  --ink-blue:#24508f; --ink-blue-wash:rgba(36,80,143,.09);
+  --onair:#b8322a; --ledger:#2e7a32; --amber:#9a6412;
+  --onair-wash:rgba(184,50,42,.09); --ledger-wash:rgba(46,122,50,.10); --amber-wash:rgba(196,140,20,.14);
+  --highlighter:rgba(244,196,48,.38); --on-signal:#ffffff;
+  --lift:0 0 0 1px rgba(28,26,22,.06),0 1px 2px -1px rgba(28,26,22,.08),0 2px 6px rgba(28,26,22,.05);
+  --serif:"Newsreader",Georgia,"Times New Roman",serif;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --ease-out:cubic-bezier(.23,1,.32,1);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#141311; --paper-raised:#1b1a17; --paper-inset:#100f0d; --manila:#2a261d;
+  --ink:#ece8df; --graphite:#c4beb2; --pencil:#9c968a;
+  --rule:rgba(236,232,223,.11); --rule-soft:rgba(236,232,223,.06); --rule-strong:rgba(236,232,223,.22);
+  --ink-blue:#86aee9; --ink-blue-wash:rgba(134,174,233,.12);
+  --onair:#f0776b; --ledger:#79c47c; --amber:#e6b450;
+  --onair-wash:rgba(240,119,107,.13); --ledger-wash:rgba(121,196,124,.12); --amber-wash:rgba(230,180,80,.14);
+  --highlighter:rgba(230,180,80,.24); --on-signal:#141311;
+  --lift:0 0 0 1px rgba(236,232,223,.08);
+  color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --paper:#141311; --paper-raised:#1b1a17; --paper-inset:#100f0d; --manila:#2a261d;
+  --ink:#ece8df; --graphite:#c4beb2; --pencil:#9c968a;
+  --rule:rgba(236,232,223,.11); --rule-soft:rgba(236,232,223,.06); --rule-strong:rgba(236,232,223,.22);
+  --ink-blue:#86aee9; --ink-blue-wash:rgba(134,174,233,.12);
+  --onair:#f0776b; --ledger:#79c47c; --amber:#e6b450;
+  --onair-wash:rgba(240,119,107,.13); --ledger-wash:rgba(121,196,124,.12); --amber-wash:rgba(230,180,80,.14);
+  --highlighter:rgba(230,180,80,.24); --on-signal:#141311; --lift:0 0 0 1px rgba(236,232,223,.08); color-scheme:dark;}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+h1,h2,h3{text-wrap:balance}
+p{text-wrap:pretty}
+a{color:var(--ink-blue);text-underline-offset:2px}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ink-blue);outline-offset:2px;border-radius:4px}
+.skip{position:absolute;left:12px;top:-60px;background:var(--ink);color:var(--paper);padding:8px 12px;border-radius:6px;z-index:100}
+.skip:focus{top:10px}
+.icon{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.small-caps{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--pencil)}
+.muted{color:var(--pencil)}
+.empty{color:var(--pencil);font-style:italic;font-family:var(--serif);font-size:16px}
+[hidden]{display:none !important}
+
+/* ---------- top line ---------- */
+.topline{display:flex;flex-wrap:wrap;gap:6px 20px;align-items:center;justify-content:space-between;min-height:52px;padding:8px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--rule)}
+.wordmark{font-family:var(--serif);font-size:20px;font-weight:600;letter-spacing:-.01em;margin:0;display:flex;align-items:baseline;gap:10px}
+.wordmark small{font-family:var(--sans);font-size:13px;font-weight:400;color:var(--pencil);letter-spacing:0}
+.status{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:center;font-size:13px;color:var(--pencil)}
+.status .line-no{color:var(--ink);font-weight:500}
+
+/* ---------- layout ---------- */
+.desk{display:grid;grid-template-columns:296px minmax(0,1fr);min-height:calc(100dvh - 53px)}
+.docket{border-right:1px solid var(--rule);padding:16px 0 32px;position:sticky;top:0;align-self:start;max-height:100dvh;overflow-y:auto}
+.content{padding:28px clamp(16px,3.5vw,48px) 64px;min-width:0}
+.sheet{max-width:960px}
+
+/* ---------- docket ---------- */
+.newapp{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;margin:0 16px 8px;padding:0 14px;border-radius:8px;border:1px solid var(--rule-strong);background:var(--paper-raised);color:var(--ink);font-weight:600;text-decoration:none;box-shadow:var(--lift);transition:background-color .15s var(--ease-out),transform .12s var(--ease-out)}
+.newapp:hover{background:var(--paper-inset)}
+.newapp:active{transform:scale(.98)}
+.newapp[aria-current="page"]{border-color:var(--ink-blue);color:var(--ink-blue)}
+.docket h2{margin:20px 16px 6px;display:flex;justify-content:space-between;align-items:baseline}
+.docket h2 .num{font-size:12px;color:var(--pencil);font-weight:400;letter-spacing:0}
+.rows{display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;min-height:56px;padding:9px 16px 9px 13px;border-left:3px solid transparent;color:var(--ink);text-decoration:none;border-bottom:1px solid var(--rule-soft);transition:background-color .15s var(--ease-out)}
+.row:hover{background:var(--paper-inset)}
+.row[aria-current="page"]{background:var(--manila);border-left-color:var(--ink)}
+.row .who{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .what{font-size:12px;color:var(--pencil);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;grid-column:1}
+.row .mark{grid-row:1 / span 2;grid-column:2;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.row .state{font-size:12px;color:var(--graphite);display:flex;gap:6px;align-items:center;justify-content:flex-end;white-space:nowrap}
+.score{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:13px;font-weight:500;font-variant-numeric:tabular-nums}
+.score .icon{width:13px;height:13px}
+.band-good{color:var(--ledger)}.band-warn{color:var(--amber)}.band-crit{color:var(--onair)}.band-none{color:var(--pencil)}
+.onair{display:inline-flex;align-items:center;gap:6px;color:var(--onair);font-weight:600}
+.onair::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--onair);box-shadow:0 0 0 3px var(--onair-wash);animation:onair 1.6s ease-in-out infinite}
+@keyframes onair{50%{opacity:.35}}
+.ruling{font-weight:600}
+.ruling.go{color:var(--ledger)}.ruling.nogo{color:var(--onair)}.ruling.hold{color:var(--amber)}
+
+/* ---------- headings & sections ---------- */
+.person h1{font-family:var(--serif);font-size:32px;font-weight:600;letter-spacing:-.015em;line-height:1.15;margin:0}
+.person .facts{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px 18px;color:var(--graphite);font-size:14px}
+.person .facts span{display:inline-flex;align-items:center;gap:6px}
+.person .facts .icon{width:14px;height:14px;color:var(--pencil)}
+section.part{margin-top:40px}
+section.part > h2{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--pencil);margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
+section.part > h2 .aside{text-transform:none;letter-spacing:0;font-weight:400;font-size:13px}
+
+/* ---------- finding + ruling (the focal band) ---------- */
+.finding{margin-top:22px;padding:18px 22px 20px;background:var(--paper-raised);border-radius:12px;box-shadow:var(--lift)}
+.readings{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:12px}
+.reading{padding:14px 22px 4px 0;border-top:3px solid var(--rule-strong);min-width:0}
+.reading + .reading{padding-left:22px;padding-right:0;border-left:1px solid var(--rule)}
+.reading.good{border-top-color:var(--ledger)}.reading.warn{border-top-color:var(--amber)}.reading.crit{border-top-color:var(--onair)}
+.reading .head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.reading .head .fig{font-family:var(--mono);font-size:30px;font-weight:500;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.reading .head .fig .of{font-size:14px;color:var(--pencil);margin-left:2px}
+.pips{display:flex;gap:3px;margin:8px 0 2px}
+.pips i{width:22px;height:5px;border-radius:2px;background:var(--paper-inset);box-shadow:inset 0 0 0 1px var(--rule-soft)}
+.pips i.on{background:currentColor;box-shadow:none}
+.pips i.half{background:linear-gradient(90deg,currentColor 50%,var(--paper-inset) 50%)}
+.rationale{font-family:var(--serif);font-size:17px;line-height:1.5;color:var(--ink);margin:8px 0 0;max-width:62ch}
+.pc{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;margin-top:12px;font-size:14px}
+.pc b{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--pencil)}
+.pc ul{margin:4px 0 0;padding-left:16px;color:var(--graphite);display:grid;gap:4px}
+.finding .when{font-size:13px;color:var(--pencil);display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center}
+.finding .verdict{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-size:24px;font-weight:600;letter-spacing:-.01em;line-height:1.2;margin:6px 0 4px}
+.finding .verdict .icon{width:22px;height:22px}
+.finding .why{color:var(--graphite);max-width:62ch;margin:0}
+.gauge{position:relative;width:100%;height:6px;border-radius:3px;background:var(--paper-inset);margin:8px 0 4px;box-shadow:inset 0 0 0 1px var(--rule-soft)}
+.gauge i{position:absolute;inset:0 auto 0 0;border-radius:3px}
+.gauge .thr{position:absolute;top:-4px;width:2px;height:14px;background:var(--ink);opacity:.55}
+.ruling-bar{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:16px;border-top:1px solid var(--rule)}
+.ruling-bar .lbl{font-weight:600;margin-right:6px}
+.seg{display:inline-flex;border-radius:8px;box-shadow:0 0 0 1px var(--rule-strong);overflow:hidden}
+.seg button{min-height:44px;min-width:92px;padding:0 14px;border:0;background:var(--paper-raised);cursor:pointer;font-weight:500;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background-color .15s var(--ease-out)}
+.seg button+button{box-shadow:-1px 0 0 var(--rule-strong)}
+.seg button:hover{background:var(--paper-inset)}
+.seg button:active{transform:scale(.98)}
+.seg button[aria-pressed="true"].go{background:var(--ledger);color:var(--on-signal)}
+.seg button[aria-pressed="true"].hold{background:var(--amber);color:var(--on-signal)}
+.seg button[aria-pressed="true"].nogo{background:var(--onair);color:var(--on-signal)}
+.ruling-bar input{flex:1 1 220px;min-width:0;min-height:44px;padding:0 12px;border-radius:8px;border:1px solid var(--rule-strong);background:var(--paper-inset);color:var(--ink);font:inherit}
+.ruling-bar .saved{font-size:12px;color:var(--pencil);min-width:120px}
+.ruling-bar .saved.err{color:var(--onair)}
+.reasons{margin:14px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+.reasons li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;font-size:14px;color:var(--graphite)}
+.reasons li .icon{margin-top:3px}
+.reasons b{color:var(--ink);font-weight:600}
+.caveat{font-size:13px;color:var(--pencil);margin:12px 0 0}
+
+/* ---------- call switcher ---------- */
+.calls{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.calls button{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--rule-strong);background:transparent;color:var(--graphite);cursor:pointer;font-size:13px;display:inline-flex;gap:8px;align-items:center}
+.calls button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+
+/* ---------- the call strip (signature) ---------- */
+.tape{position:relative;height:30px;border-radius:6px;background:var(--paper-inset);box-shadow:inset 0 0 0 1px var(--rule-soft);overflow:hidden}
+.tape .s{position:absolute;top:0;bottom:0;padding:6px 0;background-clip:content-box;border-radius:2px;cursor:pointer;border:0}
+.tape .s.agent{background:var(--rule-strong)}
+.tape .s.candidate{background:var(--ink-blue)}
+.tape .s.flag{background:var(--amber);box-shadow:0 0 0 3px var(--highlighter)}
+.tape .s:hover{filter:brightness(1.15)}
+.ticks{position:relative;height:36px;margin-top:2px}
+.ticks button{position:absolute;transform:translateX(-50%);min-width:36px;min-height:36px;padding:0 4px;border:0;background:transparent;cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--graphite);display:flex;flex-direction:column;align-items:center}
+.ticks button::before{content:"";width:1px;height:7px;background:var(--rule-strong);margin-bottom:2px}
+.ticks button.restart{color:var(--onair)}
+.ticks button.flag{color:var(--amber);font-weight:600}
+.tapekey{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--pencil);margin-top:4px}
+.tapekey i{display:inline-block;width:12px;height:8px;border-radius:2px;margin-right:6px;vertical-align:0}
+
+/* ---------- answers ---------- */
+.answers{display:flex;flex-direction:column}
+.entry{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 14px;padding:16px 0;border-bottom:1px solid var(--rule-soft)}
+.entry:last-child{border-bottom:0}
+.entry .qn{font-family:var(--mono);font-size:13px;color:var(--pencil);padding-top:2px}
+.entry .q{font-weight:600;font-size:15px;margin:0}
+.entry .said{font-family:var(--serif);font-size:17px;line-height:1.55;margin:6px 0 0;max-width:68ch}
+.entry .notyet{font-family:var(--serif);font-style:italic;color:var(--pencil);margin:6px 0 0;font-size:16px}
+.tags{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:10px;font-size:13px}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;background:var(--paper-inset);color:var(--graphite);box-shadow:inset 0 0 0 1px var(--rule-soft)}
+.tag .icon{width:13px;height:13px}
+.tag.good{background:var(--ledger-wash);color:var(--ledger);box-shadow:none}
+.tag.warn{background:var(--amber-wash);color:var(--amber);box-shadow:none}
+.tag.crit{background:var(--onair-wash);color:var(--onair);box-shadow:none}
+.assess{margin-top:10px;padding:10px 14px;border-radius:8px;background:var(--paper-inset);box-shadow:inset 0 0 0 1px var(--rule-soft);font-size:14px;color:var(--graphite);max-width:68ch}
+.assess .top{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.assess .top .num{font-weight:500;color:var(--ink)}
+.assess .top .num.band-good{color:var(--ledger)}.assess .top .num.band-crit{color:var(--onair)}
+.assess blockquote{margin:8px 0 0;padding-left:12px;border-left:2px solid var(--rule-strong);font-family:var(--serif);font-size:16px;font-style:italic;color:var(--ink)}
+.assess .unverified{display:block;font-family:var(--sans);font-style:normal;font-size:12px;color:var(--amber);margin-top:2px}
+.jump{border:0;background:none;color:var(--ink-blue);cursor:pointer;font-size:13px;padding:6px 0;min-height:32px;text-decoration:underline;text-underline-offset:2px}
+details.signals{margin-top:6px}
+details.signals summary{cursor:pointer;font-size:13px;color:var(--graphite);min-height:32px;display:inline-flex;align-items:center;gap:6px}
+.metrics{display:flex;flex-wrap:wrap;gap:4px 16px;font-family:var(--mono);font-size:12px;color:var(--graphite);margin-top:6px}
+.metrics b{color:var(--ink);font-weight:500}
+ul.ev{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--graphite)}
+
+/* ---------- transcript ---------- */
+.record{display:flex;flex-direction:column}
+.utt{display:grid;grid-template-columns:48px 84px minmax(0,1fr);gap:0 14px;padding:7px 8px;border-radius:6px;scroll-margin-top:24px}
+.utt .t{font-family:var(--mono);font-size:12px;color:var(--pencil);text-align:right;padding-top:4px;font-variant-numeric:tabular-nums}
+.utt .sp{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--pencil);padding-top:5px}
+.utt .tx{font-family:var(--serif);font-size:17px;line-height:1.55;max-width:70ch}
+.utt.agent .tx{color:var(--graphite)}
+.utt.candidate .sp{color:var(--ink-blue)}
+.utt.flag .tx{background:linear-gradient(transparent 12%,var(--highlighter) 12%,var(--highlighter) 92%,transparent 92%);box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.utt .cut{font-family:var(--sans);font-size:12px;font-weight:600;color:var(--onair);margin-left:8px;white-space:nowrap}
+.mk{display:grid;grid-template-columns:48px minmax(0,1fr);gap:0 14px;align-items:center;padding:10px 8px;scroll-margin-top:24px}
+.mk .t{font-family:var(--mono);font-size:12px;color:var(--pencil);text-align:right}
+.mk .lbl{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--graphite)}
+.mk .lbl::after{content:"";flex:1;border-top:1px dashed var(--rule-strong)}
+.mk.answer .lbl{color:var(--ledger)}
+.mk.restart .lbl{color:var(--onair)}
+.flash{animation:flash 1.2s var(--ease-out)}
+@keyframes flash{0%{background:var(--ink-blue-wash)}100%{background:transparent}}
+
+/* ---------- application ---------- */
+dl.file{display:grid;grid-template-columns:200px minmax(0,1fr);gap:10px 20px;margin:0}
+dl.file dt{color:var(--pencil);font-size:13px;padding-top:2px}
+dl.file dd{margin:0}
+dl.file dd.prose{font-family:var(--serif);font-size:17px;line-height:1.55;max-width:68ch}
+pre.resume{white-space:pre-wrap;font-family:var(--serif);font-size:16px;line-height:1.55;background:var(--paper-inset);border-radius:8px;box-shadow:inset 0 0 0 1px var(--rule-soft);padding:14px 16px;margin:0;max-height:340px;overflow:auto}
+ol.plan{margin:0;padding-left:22px;display:grid;gap:8px;font-family:var(--serif);font-size:17px}
+ol.plan small{display:block;font-family:var(--sans);font-size:12px;color:var(--pencil);margin-top:2px}
+
+/* ---------- landing ---------- */
+.lead{font-family:var(--serif);font-size:32px;font-weight:600;letter-spacing:-.015em;line-height:1.2;margin:0;max-width:24ch}
+.lead-sub{color:var(--graphite);margin:10px 0 0;max-width:60ch}
+.tally{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:16px;font-size:14px;color:var(--graphite)}
+.tally b{font-family:var(--mono);font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums;margin-right:4px}
+.queue{margin-top:28px;display:flex;flex-direction:column;border-top:1px solid var(--rule)}
+.queue a{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 16px;align-items:center;padding:14px 4px;border-bottom:1px solid var(--rule-soft);color:var(--ink);text-decoration:none;min-height:56px}
+.queue a:hover{background:var(--paper-inset)}
+.queue .who{font-weight:600}
+.queue .what{font-size:13px;color:var(--pencil)}
+
+/* ---------- apply form ---------- */
+.formhead h1{font-family:var(--serif);font-size:32px;font-weight:600;letter-spacing:-.015em;margin:0}
+.formhead p{color:var(--graphite);max-width:60ch;margin:8px 0 0}
+.errors{margin:20px 0 0;padding:14px 18px;border-radius:10px;background:var(--onair-wash);border-left:4px solid var(--onair);max-width:720px}
+.errors b{color:var(--onair)}
+.errors ul{margin:6px 0 0;padding-left:18px}
+form.apply{margin-top:24px;max-width:720px}
+fieldset{border:0;padding:0;margin:0 0 26px;display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
+legend{grid-column:1/-1;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--pencil);padding:0 0 8px;margin-bottom:6px;border-bottom:1px solid var(--rule);width:100%}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field.full{grid-column:1/-1}
+.field label{font-weight:600;font-size:14px}
+.field .req{color:var(--onair);margin-left:2px}
+.field .help{font-size:12px;color:var(--pencil)}
+.field input,.field textarea{width:100%;min-height:44px;padding:10px 12px;font:inherit;font-size:16px;border:1px solid var(--rule-strong);border-radius:8px;background:var(--paper-inset);color:var(--ink);transition:border-color .15s var(--ease-out),box-shadow .15s var(--ease-out)}
+.field textarea{resize:vertical;font-family:var(--serif);font-size:17px;line-height:1.5}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--ink-blue);box-shadow:0 0 0 3px var(--ink-blue-wash)}
+.field input[type=file]{padding:9px 10px;cursor:pointer}
+.submit{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 26px;border-radius:8px;border:0;background:var(--ink);color:var(--paper);font-weight:600;font-size:15px;cursor:pointer;transition:transform .12s var(--ease-out),opacity .15s}
+.submit:active{transform:scale(.98)}
+.submit[disabled]{opacity:.5;cursor:progress}
+
+/* ---------- how the score works ---------- */
+details.method{margin-top:56px;border-top:1px solid var(--rule);padding-top:14px}
+details.method > summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center;gap:8px}
+details.method > summary .icon{transition:transform .2s var(--ease-out)}
+details.method[open] > summary .icon{transform:rotate(90deg)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:var(--rule);border-radius:10px;overflow:hidden;margin-top:12px;box-shadow:0 0 0 1px var(--rule)}
+.stat{background:var(--paper-raised);padding:14px 16px}
+.stat .v{font-family:var(--mono);font-size:26px;font-weight:500;font-variant-numeric:tabular-nums;margin:4px 0 2px}
+.stat .b{font-size:13px;color:var(--graphite)}
+.bars{display:grid;gap:12px;margin-top:10px}
+.barrow{display:grid;grid-template-columns:minmax(120px,230px) minmax(0,1fr) 92px;gap:12px;align-items:center;font-size:13px}
+.barpair{display:grid;gap:3px}
+.bar{height:8px;border-radius:2px;min-width:2px}
+.bar.catch{background:var(--ink-blue)}.bar.ff{background:var(--amber)}
+.barrow .num{font-size:12px;color:var(--graphite);text-align:right}
+.key{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--graphite);margin-top:16px}
+.key i{display:inline-block;width:12px;height:8px;border-radius:2px;margin-right:6px}
+.tbl{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule-soft)}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--pencil);font-weight:600}
+td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px 28px;margin-top:20px}
+.notes p{margin:4px 0 0;font-size:14px;color:var(--graphite)}
+.alert{padding:12px 16px;border-radius:10px;background:var(--onair-wash);border-left:4px solid var(--onair)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+@media (max-width:900px){
+  .desk{grid-template-columns:1fr}
+  .docket{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--rule);padding-bottom:12px}
+  .rows{flex-direction:row;overflow-x:auto;gap:8px;padding:0 16px 4px;scroll-snap-type:x proximity}
+  .row{flex:0 0 232px;border:1px solid var(--rule);border-radius:10px;scroll-snap-align:start}
+  .row[aria-current="page"]{border-color:var(--ink);border-left-width:1px}
+  .readings{grid-template-columns:1fr}
+  .reading + .reading{padding-left:0;border-left:0;margin-top:14px}
+  .pc{grid-template-columns:1fr}
+  .gauge{margin-left:0}
+  fieldset{grid-template-columns:1fr}
+  dl.file{grid-template-columns:1fr;gap:2px}
+  dl.file dd{margin-bottom:10px}
+  .utt{grid-template-columns:40px minmax(0,1fr);}
+  .utt .sp{grid-column:2;padding-top:0}
+  .utt .tx{grid-column:2}
+  .utt .t{grid-row:1 / span 2}
+  .barrow{grid-template-columns:1fr;gap:4px}
+  .barrow .num{text-align:left}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#content">Skip to main content</a>
+<header class="topline">
+  <p class="wordmark">InterVoiceAI <small>phone screens, on the record</small></p>
+  <div class="status">
+    {% if agent_phone %}<span>Interview line <span class="line-no num" id="line-no">{{ agent_phone }}</span></span>{% endif %}
+    <span id="updated" aria-live="polite">Loading…</span>
+  </div>
+</header>
+
+<div class="desk">
+<aside class="docket" aria-label="Applicants">
+  <a class="newapp" href="#new" id="newlink"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New application</a>
+  <h2 class="small-caps">Applicants <span class="num" id="applicants-n"></span></h2>
+  <nav class="rows" id="applicants" aria-label="Applicants"></nav>
+  <div id="unmatched-wrap" hidden>
+    <h2 class="small-caps">Calls with no application <span class="num" id="unmatched-n"></span></h2>
+    <nav class="rows" id="unmatched" aria-label="Calls with no application"></nav>
+  </div>
+</aside>
+
+<main class="content" id="content" tabindex="-1">
+ <div class="sheet">
+  <section id="pane-new" hidden aria-labelledby="apply-title">
+    <div class="formhead">
+      <h1 id="apply-title">Apply</h1>
+      <p>Tell us about yourself and upload your resume. Nia, the phone interviewer, prepares her questions from what you submit, then you call the interview line.</p>
+    </div>
+    {% if errors %}
+    <div class="errors" role="alert" id="apply-errors" tabindex="-1"><b>Fix these and submit again:</b>
+      <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    <form class="apply" method="post" action="/apply" enctype="multipart/form-data" id="apply-form">
+      <fieldset>
+        <legend>About you</legend>
+        <div class="field"><label for="name">Full name<span class="req" aria-hidden="true">*</span></label><input id="name" name="name" type="text" required autocomplete="name" value="{{ form.name or '' }}"></div>
+        <div class="field"><label for="phone">Phone<span class="req" aria-hidden="true">*</span></label><input id="phone" name="phone" type="tel" required autocomplete="tel" placeholder="(212) 555-0142" aria-describedby="phone-help" value="{{ form.phone or '' }}"><span class="help" id="phone-help">Call from this number so Nia recognises you.</span></div>
+        <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email" value="{{ form.email or '' }}"></div>
+        <div class="field"><label for="education">Education</label><input id="education" name="education" type="text" value="{{ form.education or '' }}"></div>
+      </fieldset>
+      <fieldset>
+        <legend>The role</legend>
+        <div class="field"><label for="role">Role applying for<span class="req" aria-hidden="true">*</span></label><input id="role" name="role" type="text" required value="{{ form.role or '' }}"></div>
+        <div class="field"><label for="company">Company</label><input id="company" name="company" type="text" autocomplete="organization" value="{{ form.company or '' }}"></div>
+        <div class="field"><label for="years_experience">Years of experience</label><input id="years_experience" name="years_experience" type="number" inputmode="numeric" min="0" max="60" value="{{ form.years_experience or '' }}"></div>
+      </fieldset>
+      <fieldset>
+        <legend>In your words</legend>
+        <div class="field full"><label for="current_job">What do you do in your current job?</label><textarea id="current_job" name="current_job" rows="3" maxlength="600">{{ form.current_job or '' }}</textarea></div>
+        <div class="field full"><label for="biggest_project">Biggest project you have shipped?</label><textarea id="biggest_project" name="biggest_project" rows="3" maxlength="600">{{ form.biggest_project or '' }}</textarea></div>
+        <div class="field full"><label for="why_this_role">Why this role?</label><textarea id="why_this_role" name="why_this_role" rows="3" maxlength="600">{{ form.why_this_role or '' }}</textarea></div>
+        <div class="field full"><label for="resume">Resume<span class="req" aria-hidden="true">*</span></label><input id="resume" name="resume" type="file" required accept=".pdf,.txt" aria-describedby="resume-help"><span class="help" id="resume-help">PDF or plain text, up to 5 MB.{% if errors %} Choose the file again; browsers don't keep it after an error.{% endif %}</span></div>
+      </fieldset>
+      <p class="muted" style="font-size:13px;margin:-8px 0 16px"><span class="req" style="color:var(--onair)">*</span> required</p>
+      <button class="submit" type="submit" id="apply-submit">Submit application</button>
+    </form>
+  </section>
+
+  <section id="pane-report" hidden aria-live="polite"></section>
+  <section id="pane-home" hidden></section>
+
+  <details class="method" id="method">
+    <summary><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>How the integrity score works</summary>
+    <div id="method-body"><p class="empty">Loading the detector results…</p></div>
+  </details>
+ </div>
+</main>
+</div>
+
+<script id="boot" type="application/json">{{ {"agent_phone": agent_phone, "has_errors": errors|length > 0}|tojson }}</script>
+{% raw %}
+<script>
+"use strict";
+const BOOT = JSON.parse(document.getElementById('boot').textContent);
+const POLL_MS = 4000;
+const THRESHOLD = 0.6;  // post-interview lane: confidence at or above this = "likely AI-assisted"
+
+// ---------- helpers ----------
+const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const $ = id => document.getElementById(id);
+const ICON = {
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  warn: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  crit: '<path d="M7.9 2h8.2L22 7.9v8.2L16.1 22H7.9L2 16.1V7.9z"/><path d="M12 8v4M12 16h.01"/>',
+  dash: '<path d="M5 12h14"/>',
+  phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
+  mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>',
+  role: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+};
+const icon = (name, cls = '') => `<svg class="icon ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICON[name]}</svg>`;
+const BAND = { good: ['check', 'No indication'], warn: ['warn', 'Possible'], crit: ['crit', 'Likely'], none: ['dash', 'Not enough to judge'] };
+const RULING = { go: 'Go', hold: 'Follow up', nogo: 'No-go' };
+const OUTCOME = { completed: 'Completed', stopped: 'Stopped early', dropped: 'Hung up', in_progress: 'Live', incomplete: 'Ended without a record' };
+const VERDICT = { ai_assisted: ['crit', 'crit', 'AI-assisted (text and voice agree)'], reads_generated: ['warn', 'warn', 'Reads as generated'], sounds_read: ['warn', 'warn', 'Sounds read aloud'], none: ['good', 'check', 'No flags'], ineligible: ['', 'dash', 'Too short to judge'] };
+const FLAGGED = new Set(['ai_assisted', 'reads_generated', 'sounds_read']);
+const clock = s => s == null ? '' : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const phone = raw => { const d = String(raw ?? '').replace(/\D/g, ''); const t = d.length === 11 && d[0] === '1' ? d.slice(1) : d;
+  return t.length === 10 ? `(${t.slice(0, 3)}) ${t.slice(3, 6)}-${t.slice(6)}` : String(raw ?? ''); };
+const when = iso => iso ? new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+const plural = (n, one, many = one + 's') => `${n} ${n === 1 ? one : many}`;
+async function getJSON(url) {
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+  return r.json();
+}
+if ($('line-no')) $('line-no').textContent = phone(BOOT.agent_phone);
+
+// ---------- state ----------
+let roster = null, report = null, reportSig = '';
+const pickedCall = {};
+
+function route() {
+  const h = decodeURIComponent((location.hash || '').slice(1));
+  if (h === 'new') return { kind: 'new' };
+  if (h.startsWith('call:')) return { kind: 'call', id: h.slice(5) };
+  if (h) return { kind: 'candidate', id: h };
+  return { kind: 'home' };
+}
+
+// ---------- docket ----------
+function scoreMark(c) {
+  if (!c) return `<span class="score band-none" title="Not interviewed yet">${icon('dash')}<span>–</span></span>`;
+  const [ic, word] = BAND[c.band] || BAND.none;
+  if (c.band === 'none') return `<span class="score band-none" title="${word}">${icon(ic)}<span>–</span></span>`;
+  return `<span class="score band-${esc(c.band)}" title="Integrity score ${esc(c.score)} of 100: ${word}">${icon(ic)}<span>${esc(c.score)}</span></span>`;
+}
+function stateLine(c, decision) {
+  const ruling = decision && decision.v ? `<span class="ruling ${esc(decision.v)}">${esc(RULING[decision.v])}</span>` : '';
+  if (!c) return `<span class="state">Not called yet${ruling ? ' · ' + ruling : ''}</span>`;
+  if (c.in_progress) return `<span class="state"><span class="onair">Live</span></span>`;
+  return `<span class="state">${esc(OUTCOME[c.outcome] || c.outcome)} · <span class="num">${esc(c.recorded)}/${esc(c.questions)}</span>${ruling ? ' · ' + ruling : ''}</span>`;
+}
+function renderDocket() {
+  const r = route();
+  $('newlink').setAttribute('aria-current', r.kind === 'new' ? 'page' : 'false');
+  const apps = roster.applicants;
+  $('applicants-n').textContent = apps.length;
+  $('applicants').innerHTML = apps.length ? apps.map(a => `
+    <a class="row" href="#${encodeURIComponent(a.id)}" aria-current="${r.kind === 'candidate' && r.id === a.id ? 'page' : 'false'}">
+      <span class="who">${esc(a.name)}</span>
+      <span class="mark">${scoreMark(a.latest)}${stateLine(a.latest, a.decision)}</span>
+      <span class="what">${esc(a.role)}${a.company ? ' · ' + esc(a.company) : ''}</span>
+    </a>`).join('') : '<p class="empty" style="padding:0 16px">No applicants yet.</p>';
+  const un = roster.unmatched;
+  $('unmatched-wrap').hidden = !un.length;
+  $('unmatched-n').textContent = un.length;
+  $('unmatched').innerHTML = un.map(c => `
+    <a class="row" href="#call:${encodeURIComponent(c.id)}" aria-current="${r.kind === 'call' && r.id === c.id ? 'page' : 'false'}">
+      <span class="who">${esc(c.caller_number ? phone(c.caller_number) : 'Console or unknown caller')}</span>
+      <span class="mark">${scoreMark(c)}${stateLine(c, c.decision)}</span>
+      <span class="what">${esc(when(c.started_at))}</span>
+    </a>`).join('');
+  const live = [...apps.map(a => a.latest), ...un].filter(c => c && c.in_progress).length;
+  $('updated').innerHTML = live ? `<span class="onair">${plural(live, 'live call')}</span>` : `Updated <span class="num">${esc(new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }))}</span>`;
+}
+
+// ---------- landing: what needs you ----------
+function renderHome() {
+  const apps = roster.applicants;
+  const live = apps.filter(a => a.latest && a.latest.in_progress);
+  const waiting = apps.filter(a => a.latest && !a.latest.in_progress && !(a.decision && a.decision.v));
+  const notCalled = apps.filter(a => !a.latest);
+  const decided = apps.filter(a => a.decision && a.decision.v);
+  let lead;
+  if (live.length) lead = `${esc(live[0].name)} is on the line now.`;
+  else if (waiting.length) lead = `${plural(waiting.length, 'interview is', 'interviews are')} waiting for your decision.`;
+  else if (apps.length) lead = 'Nothing is waiting on you.';
+  else lead = 'No applicants yet.';
+  const queue = [...live, ...waiting];
+  $('pane-home').innerHTML = `
+    <h1 class="lead">${lead}</h1>
+    <p class="lead-sub">${apps.length ? 'Open an applicant to read the transcript, see how each answer scored, and record Go, Follow up or No-go.' : 'Start with a new application, then call the interview line from the phone number on it.'}</p>
+    <div class="tally"><span><b>${apps.length}</b>applicants</span><span><b>${notCalled.length}</b>not called yet</span><span><b>${decided.length}</b>decided</span>${roster.unmatched.length ? `<span><b>${roster.unmatched.length}</b>calls with no application</span>` : ''}</div>
+    ${queue.length ? `<nav class="queue" aria-label="Needs your decision">${queue.map(a => `
+      <a href="#${encodeURIComponent(a.id)}"><span><span class="who">${esc(a.name)}</span><br><span class="what">${esc(a.role)} · ${a.latest.in_progress ? '<span class="onair">Live</span>' : esc(OUTCOME[a.latest.outcome] || a.latest.outcome) + ' ' + esc(when(a.latest.started_at))}</span></span>${scoreMark(a.latest)}</a>`).join('')}</nav>` : ''}`;
+}
+
+// ---------- report ----------
+function questionOfLine(lines) {
+  // Candidate turns between one recorded answer and the next belong to the later
+  // one. Once Nia speaks again after the candidate has answered, what follows is the
+  // reply to her follow-up; owner.follow marks it, since only the main answer is
+  // what the detector scored as possibly generated.
+  const owner = new Array(lines.length).fill(null);
+  owner.follow = new Set();
+  let pending = [], answered = false;
+  lines.forEach((l, i) => {
+    if (l.kind === 'turn' && l.role === 'candidate') { pending.push([i, answered === 'follow']); answered = answered || 'main'; }
+    else if (l.kind === 'turn' && l.role === 'agent' && answered === 'main') answered = 'follow';
+    else if (l.kind === 'answer') { pending.forEach(([j, f]) => { owner[j] = l.text; if (f) owner.follow.add(j); }); pending = []; answered = false; }
+    // Talk before the identity check is not part of any answer. A restart can land
+    // mid-answer, so it does not close the window.
+    else if (l.kind === 'identity') { pending = []; answered = false; }
+    // Agent turns keep the window open, so a follow-up's reply joins the same answer.
+  });
+  return owner;
+}
+
+const RECOMMENDATION = { advance: ['good', 'check', 'Advance'], follow_up: ['warn', 'warn', 'Follow up'], do_not_advance: ['crit', 'crit', 'Do not advance'] };
+const qkey = id => /^\d+$/.test(String(id)) ? 'q' + id : String(id);
+const scoreBand = n => n == null ? '' : n >= 4 ? 'good' : n >= 3 ? '' : 'crit';
+
+function substance(call) {
+  // Nia's post-call assessment (src/assessment.py): what the candidate said.
+  const a = call.assessment;
+  const label = '<div class="small-caps">What they said · Nia&#39;s assessment</div>';
+  if (!a) return `<section class="reading" aria-label="Assessment"><div class="head">${label}</div>
+      <h2 class="verdict">${icon('dash')}<span>Not assessed yet</span></h2>
+      <p class="why">${call.in_progress ? 'Nia writes the assessment right after the call ends.' : 'No assessment was written for this call.'}</p></section>`;
+  if (a.status !== 'ok') return `<section class="reading warn" aria-label="Assessment"><div class="head">${label}</div>
+      <h2 class="verdict band-warn">${icon('warn')}<span style="color:var(--ink)">Assessment ${esc(a.status)}</span></h2>
+      <p class="why">${esc(a.error || a.reason || 'No detail recorded.')}</p></section>`;
+  const [cls, ic, lab] = RECOMMENDATION[a.recommendation] || ['', 'dash', a.recommendation];
+  const overall = a.overall == null ? null : Number(a.overall);
+  const pips = overall == null ? '' : `<div class="pips band-${cls}" aria-hidden="true">${[1, 2, 3, 4, 5].map(n => `<i class="${n <= overall ? 'on' : n - 0.5 <= overall ? 'half' : ''}"></i>`).join('')}</div>`;
+  const list = (items, title) => items && items.length ? `<div><b>${esc(title)}</b><ul>${items.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
+  return `<section class="reading ${cls}" aria-label="Assessment">
+      <div class="head">${label}<span class="fig band-${cls}" aria-label="Overall ${overall ?? 'unknown'} out of 5">${overall == null ? '–' : esc(overall)}<span class="of">/5</span></span></div>
+      <h2 class="verdict band-${cls}">${icon(ic)}<span style="color:var(--ink)">${esc(lab)}</span></h2>${pips}
+      ${a.rationale ? `<p class="rationale">${esc(a.rationale)}</p>` : ''}
+      ${(a.strengths || []).length || (a.concerns || []).length ? `<div class="pc">${list(a.strengths, 'Strengths')}${list(a.concerns, 'Concerns')}</div>` : ''}
+    </section>`;
+}
+
+function integrity(call) {
+  // The post-interview lane's read: how the answers were delivered.
+  const a = call.analysis || {};
+  const conf = a.confidence || { score: 0, band: 'low', eligible_answers: 0, strong: [], flagged: [] };
+  const score = Math.round((conf.score || 0) * 100);
+  const answers = a.answers || [];
+  // No answer long enough to judge (a call that just started, ended early, or got
+  // only short replies): say so instead of "no indication".
+  const none = !conf.eligible_answers;
+  const band = none ? 'none' : conf.score >= THRESHOLD ? 'crit' : conf.band === 'medium' ? 'warn' : 'good';
+  const title = { crit: 'Likely AI-assisted', warn: 'Possible AI assistance', good: 'No indication of AI assistance', none: 'Nothing to judge yet' }[band];
+  const flaggedCount = answers.filter(x => FLAGGED.has(x.verdict)).length;
+  const why = band === 'good' && flaggedCount
+    ? `Below the threshold overall, but ${plural(flaggedCount, 'answer was', 'answers were')} flagged on one side. Worth reading before deciding.`
+    : { crit: 'Text and voice signals agree on at least one answer. Read the flagged answers before deciding.',
+        warn: 'One side flagged, or the agreement is weak. Worth a look at the flagged answers.',
+        good: `Below the threshold on every answer. ${esc(conf.eligible_answers)} of ${plural(answers.length, 'answer')} long enough to judge.`,
+        none: answers.length ? 'No answer so far was long enough to judge. Short replies carry too few signals to score.' : 'The integrity read appears once Nia records the first answer.' }[band];
+  const reasons = answers.filter(x => FLAGGED.has(x.verdict)).map(x => {
+    const [cls, ic, label] = VERDICT[x.verdict];
+    return `<li><span class="band-${cls}">${icon(ic)}</span><span><b>${esc(x.question_id)}</b> ${esc(label)}, answer score <span class="num">${Math.round((x.confidence || 0) * 100)}</span>. ${esc((x.evidence || []).slice(0, 3).join('; '))}</span></li>`;
+  });
+  (a.problems || []).filter(p => p.severity === 'high' && !answers.some(x => x.question_id === p.area))
+    .forEach(p => reasons.push(`<li><span class="band-crit">${icon('crit')}</span><span><b>${esc(p.area)}</b> ${esc(p.note)}</span></li>`));
+  if (call.restarts) reasons.push(`<li><span class="band-warn">${icon('warn')}</span><span>The agent restarted ${plural(call.restarts, 'time')} during this call and greeted the candidate again. Timing signals near a restart are less reliable.</span></li>`);
+  const meter = band === 'crit' ? 'onair' : band === 'warn' ? 'amber' : 'ledger';
+  return `<section class="reading ${band}" aria-label="Integrity">
+      <div class="head"><div class="small-caps">How they said it · integrity</div><span class="fig band-${band}" aria-label="Integrity score ${none ? 'not available' : score + ' out of 100'}">${none ? '–' : score}<span class="of">/100</span></span></div>
+      <h2 class="verdict band-${band}">${icon(none ? 'dash' : BAND[band][0])}<span style="color:var(--ink)">${title}</span></h2>
+      <div class="gauge" style="margin:8px 0 4px" aria-hidden="true"><i style="width:${none ? 0 : score}%;background:var(--${meter})"></i><span class="thr" style="left:${THRESHOLD * 100}%"></span></div>
+      <p class="why">${why}</p>
+      ${reasons.length ? `<ul class="reasons">${reasons.join('')}</ul>` : ''}
+    </section>`;
+}
+
+function finding(call, subject, decision) {
+  const on = v => String(!!decision && decision.v === v);
+  const state = call.in_progress ? '<span class="onair">Live now</span>' : esc(OUTCOME[call.outcome] || call.outcome);
+  return `
+    <div class="finding">
+      <div class="when">${state}<span>${icon('clock')} ${esc(when(call.started_at))}${call.duration_s != null ? ` · <span class="num">${esc(clock(call.duration_s))}</span>` : ''}</span></div>
+      <div class="readings">${substance(call)}${integrity(call)}</div>
+      <div class="ruling-bar" id="decision" data-subject="${esc(subject)}">
+        <span class="lbl">Your decision</span>
+        <span class="seg" role="group" aria-label="Your decision">
+          <button type="button" class="go" data-v="go" aria-pressed="${on('go')}">Go</button>
+          <button type="button" class="hold" data-v="hold" aria-pressed="${on('hold')}">Follow up</button>
+          <button type="button" class="nogo" data-v="nogo" aria-pressed="${on('nogo')}">No-go</button>
+        </span>
+        <input type="text" maxlength="500" placeholder="Why? A line for the hiring team" aria-label="Decision note" value="${esc(decision ? decision.note : '')}">
+        <span class="saved" aria-live="polite">${decision ? 'Saved ' + esc(when(decision.at)) : 'Not decided'}</span>
+      </div>
+    </div>
+    <p class="caveat">Both readings are written by AI for a person to weigh, never an automatic decision. The integrity thresholds are not yet calibrated on real calls.</p>`;
+}
+
+function tape(call, owner, flagged) {
+  const lines = call.transcript || [];
+  const turns = lines.map((l, i) => ({ ...l, i })).filter(l => l.at_s != null);
+  if (!turns.length) return '';
+  const end = Math.max(call.duration_s || 0, turns[turns.length - 1].at_s + 4);
+  const pos = s => Math.min(100, Math.max(0, (s / end) * 100));
+  const segs = [], ticks = [];
+  turns.forEach((l, k) => {
+    if (l.kind === 'turn') {
+      const next = turns.slice(k + 1).find(x => x.kind === 'turn');
+      const stop = next ? next.at_s : Math.min(end, l.at_s + 6);
+      const isFlag = l.role === 'candidate' && owner[l.i] && flagged.has(owner[l.i]) && !owner.follow.has(l.i);
+      const cls = isFlag ? 'flag' : l.role === 'candidate' ? 'candidate' : 'agent';
+      segs.push(`<button type="button" class="s ${cls}" tabindex="-1" aria-hidden="true" data-target="ln-${l.i}" style="left:${pos(l.at_s)}%;width:${Math.max(0.4, pos(stop) - pos(l.at_s) - 0.15)}%"></button>`);
+    } else if (l.kind === 'answer' || l.kind === 'restart') {
+      const cls = l.kind === 'restart' ? 'restart' : flagged.has(l.text) ? 'flag' : '';
+      const lab = l.kind === 'restart' ? 'restart' : l.text;
+      ticks.push(`<button type="button" class="${cls}" data-target="ln-${l.i}" style="left:${pos(l.at_s)}%" aria-label="Jump to ${l.kind === 'restart' ? 'agent restart' : esc(l.text) + ' recorded'} at ${clock(l.at_s)}">${esc(lab)}</button>`);
+    }
+  });
+  return `<div class="tape" role="img" aria-label="Call timeline, ${clock(end)} long">${segs.join('')}</div>
+    <div class="ticks">${ticks.join('')}</div>
+    <div class="tapekey"><span><i style="background:var(--rule-strong)"></i>Nia</span><span><i style="background:var(--ink-blue)"></i>Candidate</span><span><i style="background:var(--amber)"></i>Flagged answer</span><span>Click the tape to jump to that moment</span></div>`;
+}
+
+function answerEntry(x, firstLine, aq) {
+  const an = x.analysis;
+  const hint = x.quality_hint ? `<span class="tag ${x.quality_hint === 'adequate' ? 'good' : x.quality_hint === 'thin' ? 'warn' : 'crit'}">${esc(x.quality_hint.replace('_', ' '))}</span>` : '';
+  let signal = '', details = '';
+  if (an) {
+    const [cls, ic, label] = VERDICT[an.verdict] || ['', 'dash', an.verdict];
+    const d = an.delivery, t = an.text || { words: 0, signals: [] };
+    const m = d ? `<span>onset <b>${esc(d.onset_ms ?? '?')}</b> ms</span><span><b>${esc(d.main?.wpm ?? '?')}</b> wpm</span><span>fillers <b>${esc(d.main?.fillers_per100)}</b>/100</span><span>pauses <b>${esc(d.main?.pauses_per100)}</b>/100</span><span>restarts <b>${esc(d.main?.restarts_per100)}</b>/100</span>${d.follow_up ? `<span>follow-up disfluency <b>${esc(d.follow_up.disfluency_per100)}</b> vs <b>${esc(d.main?.disfluency_per100)}</b></span>` : ''}` : '<span>no word timings</span>';
+    signal = `<span class="tag ${cls}">${icon(ic)}${esc(label)}</span><span class="num muted">score ${Math.round((an.confidence || 0) * 100)}</span>`;
+    details = `<details class="signals"><summary>Signals behind it · <span class="num">${esc(t.words)}</span> words, <span class="num">${esc((t.signals || []).length)}</span>/6 text signals</summary>
+      <div class="metrics">${m}</div>${(an.evidence || []).length ? `<ul class="ev">${an.evidence.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : ''}</details>`;
+  }
+  const jump = firstLine != null ? `<button type="button" class="jump" data-target="ln-${firstLine}">Read it in the transcript</button>` : '';
+  return `<article class="entry">
+    <div class="qn">${esc(x.question_id)}</div>
+    <div>
+      <p class="q">${esc(x.question || 'Question text not saved')}</p>
+      ${x.summary ? `<p class="said">${esc(x.summary)}</p>` : `<p class="notyet">${x.recorded ? 'Recorded without a summary.' : 'Not reached on this call.'}</p>`}
+      <div class="tags">${hint}${signal}${jump}</div>
+      ${aq ? `<div class="assess"><div class="top"><span class="small-caps">Assessment</span>${aq.score == null ? '<span>Not answered</span>' : `<span class="num band-${scoreBand(aq.score)}">${esc(aq.score)}/5</span>`}${aq.note ? `<span>${esc(aq.note)}</span>` : ''}</div>
+        ${aq.evidence ? `<blockquote>“${esc(aq.evidence)}”${aq.evidence_verified ? '' : '<span class="unverified">Not found word for word in the transcript</span>'}</blockquote>` : ''}</div>` : ''}
+      ${details}
+    </div>
+  </article>`;
+}
+
+function record(lines, owner, flagged) {
+  if (!lines.length) return '<p class="empty">Nothing said yet.</p>';
+  return `<div class="record">${lines.map((l, i) => {
+    if (l.kind === 'turn') {
+      const isFlag = l.role === 'candidate' && owner[i] && flagged.has(owner[i]) && !owner.follow.has(i);
+      const who = l.role === 'agent' ? 'Nia' : l.role === 'candidate' ? 'Candidate' : l.role;
+      return `<div class="utt ${esc(l.role)}${isFlag ? ' flag' : ''}" id="ln-${i}"><div class="t">${esc(clock(l.at_s))}</div><div class="sp">${esc(who)}</div><div class="tx">${esc(l.text)}${l.interrupted ? '<span class="cut">cut off</span>' : ''}</div></div>`;
+    }
+    const label = l.kind === 'answer' ? `${l.text} recorded` : l.text;
+    return `<div class="mk ${esc(l.kind)}" id="ln-${i}"><div class="t">${esc(clock(l.at_s))}</div><div class="lbl">${esc(label)}</div></div>`;
+  }).join('')}</div>`;
+}
+
+function fileView(c) {
+  const ans = c.answers || {};
+  const facts = [['Role', c.role], ['Company', c.company], ['Education', c.education], ['Years of experience', c.years_experience], ['Applied', when(c.created_at)]];
+  const qa = [['Current job', ans.current_job], ['Biggest project shipped', ans.biggest_project], ['Why this role', ans.why_this_role]];
+  const dd = (v, prose) => v == null || v === '' ? '<dd class="empty">Not given</dd>' : `<dd${prose ? ' class="prose"' : ''}>${esc(v)}</dd>`;
+  return `
+    <dl class="file">${facts.map(([k, v]) => `<dt>${esc(k)}</dt>${dd(v)}`).join('')}${qa.map(([k, v]) => `<dt>${esc(k)}</dt>${dd(v, true)}`).join('')}</dl>
+    <h3 class="small-caps" style="margin:28px 0 8px">Resume <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">· first ${esc(Math.min(c.resume_chars, c.resume_excerpt.length))} of ${esc(c.resume_chars)} characters, ${esc(c.resume_filename)}</span></h3>
+    <pre class="resume">${esc(c.resume_excerpt)}</pre>
+    <h3 class="small-caps" style="margin:28px 0 8px">Questions Nia prepared</h3>
+    ${c.plan && c.plan.length ? `<ol class="plan">${c.plan.map(q => `<li>${esc(q.text)}<small>${esc(q.topic)}${q.grounded_in ? ' · from: ' + esc(q.grounded_in) : ''}</small></li>`).join('')}</ol>` : '<p class="empty">Nia prepares the questions from the resume when the candidate calls.</p>'}`;
+}
+
+function renderReport() {
+  const r = route();
+  const subject = r.id;
+  const calls = report.calls || [];
+  const sel = calls.find(c => c.id === pickedCall[subject]) || calls[0] || null;
+  const c = report.candidate;
+  const head = c ? `<header class="person"><h1>${esc(c.name)}</h1>
+      <div class="facts"><span>${icon('role')}${esc(c.role)}${c.company ? ' at ' + esc(c.company) : ''}</span>${c.phone ? `<span>${icon('phone')}<span class="num">${esc(phone(c.phone))}</span></span>` : ''}${c.email ? `<span>${icon('mail')}${esc(c.email)}</span>` : ''}</div></header>`
+    : `<header class="person"><h1>Call with no application</h1>
+      <div class="facts"><span>${icon('phone')}<span class="num">${esc(sel?.caller_number ? phone(sel.caller_number) : 'Console or unknown caller')}</span></span><span>${icon('clock')}${esc(when(sel?.started_at))}</span></div></header>`;
+  let body;
+  if (!sel) {
+    body = `<div class="finding"><div><div class="when">Not interviewed yet</div>
+      <h2 class="verdict" style="font-size:22px">Waiting for ${esc(c.name.split(' ')[0])} to call</h2>
+      <p class="why">${BOOT.agent_phone ? `From <span class="num">${esc(phone(c.phone))}</span> to the interview line <span class="num">${esc(phone(BOOT.agent_phone))}</span>. ` : ''}The call appears here live, with the transcript filling in as they talk.</p></div></div>`;
+  } else {
+    const flagged = new Set((sel.analysis?.answers || []).filter(x => FLAGGED.has(x.verdict)).map(x => x.question_id));
+    const owner = questionOfLine(sel.transcript || []);
+    const firstLineOf = {};
+    owner.forEach((q, i) => { if (q && firstLineOf[q] == null) firstLineOf[q] = i; });
+    const aqs = Object.fromEntries(((sel.assessment && sel.assessment.status === 'ok' && sel.assessment.questions) || []).map(q => [qkey(q.id), q]));
+    const answers = (sel.answers || []).map(x => answerEntry(x, firstLineOf[x.question_id], aqs[x.question_id])).join('');
+    const mech = (sel.analysis?.problems || []).filter(p => !(sel.answers || []).some(a => a.question_id === p.area));
+    const switcher = calls.length > 1 ? `<div class="calls" role="group" aria-label="Calls">${calls.map(x => `<button type="button" data-call="${esc(x.id)}" aria-pressed="${x.id === sel.id}">${esc(when(x.started_at))} · ${x.in_progress ? 'Live' : esc(OUTCOME[x.outcome] || x.outcome)} ${scoreMark(x)}</button>`).join('')}</div>` : '';
+    const recorded = (sel.answers || []).filter(x => x.recorded).length;
+    body = `${switcher}${finding(sel, subject, report.decision)}
+      <section class="part" aria-labelledby="h-tape"><h2 id="h-tape">The call <span class="aside num">${esc(clock(sel.duration_s ?? (sel.transcript || []).slice(-1)[0]?.at_s))}</span></h2>${tape(sel, owner, flagged)}</section>
+      <section class="part" aria-labelledby="h-answers"><h2 id="h-answers">Answers <span class="aside">${recorded} of ${plural((sel.answers || []).length, 'question')} recorded</span></h2>
+        <div class="answers">${answers || '<p class="empty">No questions on record.</p>'}</div>
+        ${mech.length ? `<ul class="reasons" style="margin-top:14px">${mech.map(p => `<li><span class="band-${p.severity === 'high' ? 'crit' : 'warn'}">${icon(p.severity === 'high' ? 'crit' : 'warn')}</span><span><b>${esc(p.area)}</b> ${esc(p.note)}</span></li>`).join('')}</ul>` : ''}</section>
+      <section class="part" aria-labelledby="h-record"><h2 id="h-record">Transcript <span class="aside">${flagged.size ? 'Highlighted: the main answer of each flagged question' : 'Nia in grey, the candidate in ink'}</span></h2>${record(sel.transcript || [], owner, flagged)}</section>`;
+  }
+  const file = c ? `<section class="part" aria-labelledby="h-file"><h2 id="h-file">Application</h2>${fileView(c)}</section>` : '';
+  $('pane-report').innerHTML = head + body + file;
+  bindReport(subject);
+}
+
+function jumpTo(id) {
+  const el = $(id);
+  if (!el) return;
+  // Instant, then a brief flash marks the spot: a long smooth scroll through a
+  // transcript feels slow when a recruiter jumps around.
+  el.scrollIntoView({ behavior: 'auto', block: 'center' });
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+}
+
+function bindReport(subject) {
+  const pane = $('pane-report');
+  pane.querySelectorAll('[data-target]').forEach(b => b.addEventListener('click', () => jumpTo(b.dataset.target)));
+  pane.querySelectorAll('.calls button').forEach(b => b.addEventListener('click', () => { pickedCall[subject] = b.dataset.call; renderReport(); }));
+  const d = $('decision');
+  if (!d) return;
+  const note = d.querySelector('input'), saved = d.querySelector('.saved');
+  const save = async v => {
+    const current = d.querySelector('[aria-pressed="true"]')?.dataset.v || null;
+    const body = { v: v === undefined ? current : (v === current ? null : v), note: note.value };
+    saved.className = 'saved'; saved.textContent = 'Saving…';
+    try {
+      const r = await fetch(`/api/decisions/${encodeURIComponent(subject)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${(await r.json()).detail}`);
+      const rec = await r.json();
+      d.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === rec.v)));
+      saved.textContent = 'Saved ' + when(rec.at);
+      if (report) report.decision = rec;
+      await refreshRoster();
+    } catch (err) {
+      saved.className = 'saved err'; saved.textContent = 'Not saved. ' + err.message + '. Try again.';
+    }
+  };
+  d.querySelectorAll('button').forEach(b => b.addEventListener('click', () => save(b.dataset.v)));
+  note.addEventListener('change', () => save(undefined));
+}
+
+// ---------- panes ----------
+async function show(fromNav = false) {
+  const r = route();
+  $('pane-new').hidden = r.kind !== 'new';
+  $('pane-home').hidden = r.kind !== 'home';
+  $('pane-report').hidden = !(r.kind === 'candidate' || r.kind === 'call');
+  if (roster) { renderDocket(); if (r.kind === 'home') renderHome(); }
+  if (r.kind === 'candidate' || r.kind === 'call') {
+    const url = r.kind === 'candidate' ? `/api/candidates/${encodeURIComponent(r.id)}` : `/api/calls/${encodeURIComponent(r.id)}`;
+    try {
+      report = await getJSON(url);
+      reportSig = roster ? sigOf(rosterEntry(r)) : '';
+      renderReport();
+    } catch (err) {
+      report = null;
+      $('pane-report').innerHTML = `<div class="alert" role="alert"><b>Could not load this ${r.kind === 'call' ? 'call' : 'applicant'}.</b> ${esc(err.message)}. It may have been removed; pick another from the list.</div>`;
+    }
+  } else report = null;
+  if (fromNav) { window.scrollTo(0, 0); $('content').focus({ preventScroll: true }); }
+}
+function rosterEntry(r) {
+  if (r.kind === 'candidate') { const a = roster.applicants.find(x => x.id === r.id); return a ? a.latest : undefined; }
+  if (r.kind === 'call') return roster.unmatched.find(x => x.id === r.id);
+  return undefined;
+}
+const sigOf = e => e === undefined ? 'missing' : JSON.stringify(e && [e.id, e.outcome, e.recorded, e.score, e.in_progress]);
+
+async function refreshRoster() {
+  roster = await getJSON('/api/roster');
+  renderDocket();
+  if (route().kind === 'home') renderHome();
+}
+
+async function tick() {
+  try {
+    await refreshRoster();
+    const r = route();
+    const busy = document.activeElement && (document.activeElement.closest('#decision') || document.activeElement.closest('details.signals'));
+    if ((r.kind === 'candidate' || r.kind === 'call') && report && !busy) {
+      const live = (report.calls || []).some(c => c.in_progress);
+      if (live || sigOf(rosterEntry(r)) !== reportSig) {
+        const y = window.scrollY;
+        const open = [...document.querySelectorAll('details.signals')].map(d => d.open);
+        await show();
+        document.querySelectorAll('details.signals').forEach((d, i) => { if (open[i]) d.open = true; });
+        window.scrollTo(0, y);
+      }
+    }
+  } catch (err) {
+    $('updated').innerHTML = `<span class="band-crit">Couldn't refresh</span> <span class="muted">${esc(err.message)}. Retrying.</span>`;
+  }
+}
+
+// ---------- apply form ----------
+$('apply-form').addEventListener('submit', () => { const b = $('apply-submit'); b.disabled = true; b.textContent = 'Submitting…'; });
+
+// ---------- how the score works (loaded on first open) ----------
+const pct = x => x == null ? 'n/a' : Math.round(x * 100) + '%';
+$('method').addEventListener('toggle', async e => {
+  if (!e.target.open || e.target.dataset.loaded) return;
+  e.target.dataset.loaded = '1';
+  const body = $('method-body');
+  try {
+    const D = await getJSON('/api/detectors');
+    const both = D.detectors.find(d => d.name === 'Both sides agree');
+    const coin = D.detectors.find(d => d.name === 'Coin flip');
+    const para = D.tiers.find(t => t.tier === 'ai_paraphrased');
+    const prep = D.tiers.find(t => t.tier === 'human_prepared');
+    const stats = [
+      ['Catch rate, both sides agree', pct(both?.catch), `coin flip catches ${pct(coin?.catch)}`],
+      ['False flags, both sides agree', pct(both?.false_flag), `coin flip: ${pct(coin?.false_flag)}`],
+      ['Paraphrased AI answers caught', para ? `${para.both}/${para.n}` : 'n/a', "generated text re-spoken in the candidate's words"],
+      ['Prepared honest stories flagged', prep ? `${prep.both}/${prep.n}` : 'n/a', 'rehearsed, fluent, true'],
+    ];
+    const cols = Object.keys(D.tiers[0] || {});
+    body.innerHTML = `
+      <p class="lead-sub">Measured on <span class="num">${esc(D.n_fixtures)}</span> labelled answers, next to do-nothing baselines. This is the evidence behind every score on this page.</p>
+      <div class="stats">${stats.map(([k, v, b]) => `<div class="stat"><div class="small-caps">${esc(k)}</div><div class="v">${esc(v)}</div><div class="b">${esc(b)}</div></div>`).join('')}</div>
+      <div class="key"><span><i style="background:var(--ink-blue)"></i>Catch rate on AI-written answers</span><span><i style="background:var(--amber)"></i>False-flag rate on human answers</span></div>
+      <div class="bars" role="table" aria-label="Catch and false-flag rate per detector">${D.detectors.map(d => `<div class="barrow" role="row"><div role="rowheader">${esc(d.name)}</div><div class="barpair" aria-hidden="true">
+        <div class="bar catch" style="width:${Math.round((d.catch || 0) * 100)}%"></div><div class="bar ff" style="width:${Math.round((d.false_flag || 0) * 100)}%"></div></div>
+        <div class="num" role="cell">${pct(d.catch)} / ${pct(d.false_flag)}</div></div>`).join('')}</div>
+      <div class="tbl"><table><thead><tr>${cols.map(k => `<th class="${k === 'tier' ? '' : 'n'}">${esc(k.replace(/_/g, ' '))}</th>`).join('')}</tr></thead>
+        <tbody>${D.tiers.map(t => `<tr>${cols.map(k => `<td class="${k === 'tier' ? '' : 'n'}">${esc(t[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+      <div class="notes">
+        <div><b>Voice: did it sound read?</b><p>Onset after the question, words per minute, fillers and mid-sentence pauses per 100 words, restarts, and the fluency drop when Nia asks an unscripted follow-up. Three or more on an answer of 40+ words means "sounds read".</p></div>
+        <div><b>Text: does it read as generated?</b><p>No disfluencies, enumerations, no concrete detail, long uniform sentences, formal register, stock competency phrases. Three or more on 25+ words means "reads generated".</p></div>
+        <div><b>The score</b><p>Either side alone is a note; both together is "AI-assisted". The 0 to 100 score comes from the two strongest answers, discounted when fewer than three were long enough. Under 35 no indication, 35 to 59 possible, 60 and above likely.</p></div>
+        <div><b>What it cannot claim</b><p>Fluent speakers, prepared honest stories, non-native speakers and anxious candidates can all look like readers. That is why it is evidence for a person, never an automatic rejection.</p></div>
+      </div>`;
+  } catch (err) {
+    delete e.target.dataset.loaded;
+    body.innerHTML = `<div class="alert" role="alert"><b>Could not load the detector results.</b> ${esc(err.message)}. Close and reopen this section to retry.</div>`;
+  }
+});
+
+// ---------- start ----------
+// After a rejected POST /apply the address bar says /apply; point it back at the page.
+if (BOOT.has_errors) history.replaceState(null, '', '/#new');
+window.addEventListener('hashchange', () => { show(true); });
+(async () => {
+  try { await refreshRoster(); } catch (err) { $('updated').innerHTML = `<span class="band-crit">Couldn't load applicants</span> <span class="muted">${esc(err.message)}</span>`; }
+  await show();
+  // Focus can only land once the Apply pane is visible.
+  if (BOOT.has_errors) $('apply-errors')?.focus();
+  setInterval(tick, POLL_MS);
+})();
+</script>
+{% endraw %}
+</body>
+</html>

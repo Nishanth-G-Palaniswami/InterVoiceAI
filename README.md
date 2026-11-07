@@ -6,7 +6,10 @@
 > post-interview lane). Candidates apply on the intake page; the agent recognises them by
 > caller ID or by name.
 >
-> - Apply page: `uv run python src/intake_app.py` -> http://127.0.0.1:3001 (writes `data/candidates/<id>.json`)
+> - App: `uv run python src/intake_app.py` -> http://127.0.0.1:3001. One page: apply
+>   (writes `data/candidates/<id>.json`), and click any applicant for their application,
+>   answers, integrity score and live transcript (`src/recruiter.py`). Recruiter decisions
+>   go to `data/decisions/`.
 > - Agent: `AGENT_PROFILE=mine` and `MODEL_PRESET=interview` in `.env.local`; iterate with
 >   `lk agent debugger start`, answer the number with `lk agent dev --deployment production`
 > - Records: `data/calls/<room>.json` (answers + integrity), `calls/<room>.events.jsonl` (for `evals/ai_detect`)
