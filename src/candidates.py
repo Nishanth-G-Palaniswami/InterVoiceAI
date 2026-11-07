@@ -46,7 +46,11 @@ class Candidate(TypedDict):
     answers: dict[str, str]  # current_job, biggest_project, why_this_role
     resume_text: str  # plain text, at most RESUME_MAX_CHARS
     resume_filename: str
+    resume_file: str  # the original upload, relative to data_dir(); "" if not kept
     plan: list[Question] | None  # None from the UI; the agent fills it
+
+
+RESUME_EXTENSIONS = {".pdf", ".txt"}
 
 
 def data_dir() -> Path:
@@ -60,6 +64,32 @@ def candidates_dir() -> Path:
 
 def calls_dir() -> Path:
     return data_dir() / "calls"
+
+
+def resumes_dir() -> Path:
+    return data_dir() / "resumes"
+
+
+def save_resume(candidate_id: str, filename: str, data: bytes) -> str:
+    """Keep the original upload; returns its path relative to data_dir()."""
+    ext = Path(filename).suffix.lower()
+    if ext not in RESUME_EXTENSIONS:
+        raise ValueError(
+            f"resume must be one of {sorted(RESUME_EXTENSIONS)}, got {ext!r}"
+        )
+    path = resumes_dir() / f"{candidate_id}{ext}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    return f"resumes/{candidate_id}{ext}"
+
+
+def resume_path(candidate: Candidate) -> Path | None:
+    """The stored original, or None when it was never kept or is gone."""
+    rel = candidate.get("resume_file") or ""
+    if not rel:
+        return None
+    path = data_dir() / rel
+    return path if path.is_file() else None
 
 
 # ---------- normalisation ----------
@@ -102,6 +132,7 @@ def new_candidate(
     answers: dict[str, str] | None = None,
     resume_text: str = "",
     resume_filename: str = "",
+    resume_file: str = "",
 ) -> Candidate:
     """Build a validated C1 record. Raises ValueError listing every missing field."""
     digits = normalize_phone(phone)
@@ -131,6 +162,7 @@ def new_candidate(
         answers=dict(answers or {}),
         resume_text=resume_text[:RESUME_MAX_CHARS],
         resume_filename=resume_filename,
+        resume_file=resume_file,
         plan=None,
     )
 

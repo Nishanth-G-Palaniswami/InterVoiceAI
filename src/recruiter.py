@@ -452,12 +452,17 @@ def candidate_report(candidate_id: str) -> dict[str, Any]:
     """Everything about one applicant. FileNotFoundError if there is no such file."""
     cand = candidates.load(candidate_id)
     resume = cand["resume_text"]
+    stored = candidates.resume_path(cand)
     return {
         "kind": "candidate",
         "candidate": {
             **{k: v for k, v in cand.items() if k != "resume_text"},
             "resume_excerpt": resume[:RESUME_EXCERPT_CHARS],
             "resume_chars": len(resume),
+            # the original upload, when it was kept (applications before file
+            # storage existed have only the extracted text)
+            "resume_url": f"/resumes/{candidate_id}" if stored else None,
+            "resume_kind": stored.suffix.lower().lstrip(".") if stored else None,
         },
         "decision": load_decision(candidate_id),
         "calls": [c for c in all_calls() if c["candidate_id"] == candidate_id],
