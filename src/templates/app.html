@@ -661,8 +661,10 @@ function fileView(c) {
   const dd = (v, prose) => v == null || v === '' ? '<dd class="empty">Not given</dd>' : `<dd${prose ? ' class="prose"' : ''}>${esc(v)}</dd>`;
   return `
     <dl class="file">${facts.map(([k, v]) => `<dt>${esc(k)}</dt>${dd(v)}`).join('')}${qa.map(([k, v]) => `<dt>${esc(k)}</dt>${dd(v, true)}`).join('')}</dl>
-    <h3 class="small-caps" style="margin:28px 0 8px">Resume <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">· first ${esc(Math.min(c.resume_chars, c.resume_excerpt.length))} of ${esc(c.resume_chars)} characters, ${esc(c.resume_filename)}</span></h3>
-    <pre class="resume">${esc(c.resume_excerpt)}</pre>
+    <h3 class="small-caps" style="margin:28px 0 8px">Resume <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">· ${esc(c.resume_filename)}${c.resume_url ? ` · <a href="${esc(c.resume_url)}" target="_blank" rel="noopener">open in a new tab</a>` : ' · original file not kept (applied before file storage)'}</span></h3>
+    ${c.resume_url && c.resume_kind === 'pdf' ? `<iframe src="${esc(c.resume_url)}#view=FitH" title="Resume PDF: ${esc(c.resume_filename)}" style="width:100%;height:72vh;border:1px solid var(--grid,#d8d8d8);border-radius:8px;background:#fff"></iframe>` : ''}
+    <details ${c.resume_url && c.resume_kind === 'pdf' ? '' : 'open'} style="margin-top:8px"><summary class="muted" style="cursor:pointer">Extracted text Nia reads · first ${esc(Math.min(c.resume_chars, c.resume_excerpt.length))} of ${esc(c.resume_chars)} characters</summary>
+    <pre class="resume">${esc(c.resume_excerpt)}</pre></details>
     <h3 class="small-caps" style="margin:28px 0 8px">Questions Nia prepared</h3>
     ${c.plan && c.plan.length ? `<ol class="plan">${c.plan.map(q => `<li>${esc(q.text)}<small>${esc(q.topic)}${q.grounded_in ? ' · from: ' + esc(q.grounded_in) : ''}</small></li>`).join('')}</ol>` : '<p class="empty">Nia prepares the questions from the resume when the candidate calls.</p>'}`;
 }

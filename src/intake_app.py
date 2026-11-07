@@ -24,7 +24,7 @@ from typing import Annotated, Any
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from pypdf import PdfReader
@@ -151,6 +151,7 @@ async def apply(
         errors.append(str(err))
 
     resume_text = resume_filename = ""
+    resume_bytes = b""
     if resume is None or not resume.filename:
         errors.append("resume file (.pdf or .txt) is required")
     else:
@@ -161,6 +162,7 @@ async def apply(
         else:
             try:
                 resume_text = extract_resume_text(resume_filename, data)
+                resume_bytes = data
             except ValueError as err:
                 errors.append(str(err))
 
@@ -185,8 +187,35 @@ async def apply(
         errors.append(str(err))
     if errors:
         return render_page(request, errors=errors, form=form, status_code=400)
+    # Keep the original file so the recruiter can see the resume as sent.
+    candidate["resume_file"] = candidates.save_resume(
+        candidate["id"], resume_filename, resume_bytes
+    )
     logger.info("saved %s -> %s", candidate["id"], candidates.save(candidate))
     return RedirectResponse(url=f"/#{candidate['id']}", status_code=303)
+
+
+@app.get("/resumes/{candidate_id}")
+async def resume_file(candidate_id: str) -> FileResponse:
+    """The resume exactly as uploaded: a PDF renders inline, a .txt as text."""
+    if not ID_RE.fullmatch(candidate_id):
+        raise HTTPException(status_code=404, detail="no such candidate")
+    try:
+        cand = candidates.load(candidate_id)
+    except FileNotFoundError as err:
+        raise HTTPException(status_code=404, detail="no such candidate") from err
+    path = candidates.resume_path(cand)
+    if path is None:
+        raise HTTPException(
+            status_code=404, detail="no resume file kept for this applicant"
+        )
+    is_pdf = path.suffix.lower() == ".pdf"
+    safe_name = re.sub(r"[^A-Za-z0-9._ -]", "_", cand["resume_filename"] or path.name)
+    return FileResponse(
+        path,
+        media_type="application/pdf" if is_pdf else "text/plain; charset=utf-8",
+        headers={"Content-Disposition": f'inline; filename="{safe_name}"'},
+    )
 
 
 # ---------- recruiter data (JSON for the page) ----------
